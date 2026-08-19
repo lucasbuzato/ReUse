@@ -1,0 +1,72 @@
+// Schema do banco de dados da plataforma ReUse!
+// ORM: Prisma | Banco de dados: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Usuários da plataforma (doadores e interessados em itens)
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String   // armazenada como hash (scrypt)
+  city      String?
+  createdAt DateTime @default(now())
+
+  items     Item[]
+  interests Interest[]
+
+  @@map("users")
+}
+
+/// Categorias usadas para organizar os itens
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  items Item[]
+
+  @@map("categories")
+}
+
+/// Itens disponíveis para doação/troca na plataforma
+model Item {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  condition   String
+  imageUrl    String?
+  status      String   @default("DISPONIVEL")
+  createdAt   DateTime @default(now())
+
+  ownerId    String
+  owner      User     @relation(fields: [ownerId], references: [id])
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  interests Interest[]
+
+  @@map("items")
+}
+
+/// Registro de interesse de um usuário em um item
+model Interest {
+  id        String   @id @default(cuid())
+  message   String
+  createdAt DateTime @default(now())
+
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId, itemId])
+  @@map("interests")
+}

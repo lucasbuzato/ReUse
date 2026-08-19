@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --reuse-green: #2f8f5b;
+  --reuse-green-dark: #216b43;
+  --reuse-green-light: #e8f5ed;
+  --reuse-bg: #f6faf7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--reuse-bg);
+  color: #1f2937;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: #bce8cc;
+  color: #174d31;
+}
+
+@layer components {
+  .reuse-card {
+    @apply bg-white border border-gray-100 rounded-2xl shadow-sm;
+  }
+
+  .reuse-button {
+    @apply inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold transition-all duration-200;
+  }
+
+  .reuse-button-primary {
+    @apply reuse-button bg-reuse-green text-white hover:bg-reuse-greenDark hover:-translate-y-0.5 shadow-sm;
+  }
+
+  .reuse-button-secondary {
+    @apply reuse-button border border-reuse-green text-reuse-green bg-white hover:bg-reuse-greenDark;
+  }
+}
