@@ -4,7 +4,20 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
 const SESSION_COOKIE = "reuse_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
-const AUTH_SECRET = process.env.AUTH_SECRET || "reuse-academic-secret-change-me";
+
+function resolveAuthSecret() {
+  const secret = process.env.AUTH_SECRET;
+
+  if (secret) return secret;
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_SECRET precisa ser configurado em produção.");
+  }
+
+  return "reuse-local-development-only";
+}
+
+const AUTH_SECRET = resolveAuthSecret();
 
 type SessionPayload = { userId: string; expiresAt: number };
 

@@ -81,18 +81,11 @@ export default function ItemActions({
   }
 
   return (
-    <div className="mt-6 border-t border-gray-100 pt-5">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-lg">⚙️</span>
-
-        <p className="font-bold text-gray-800">
-          Gerenciar anúncio
-        </p>
-      </div>
-
+    <div className="mt-5 border-t border-gray-100 pt-5">
       <div className="flex flex-wrap gap-2">
         {status !== "DISPONIVEL" && (
           <button
+            type="button"
             disabled={carregando}
             onClick={() =>
               atualizarStatus("DISPONIVEL")
@@ -105,6 +98,7 @@ export default function ItemActions({
 
         {status !== "RESERVADO" && (
           <button
+            type="button"
             disabled={carregando}
             onClick={() =>
               atualizarStatus("RESERVADO")
@@ -117,6 +111,7 @@ export default function ItemActions({
 
         {status !== "DOADO" && (
           <button
+            type="button"
             disabled={carregando}
             onClick={() =>
               atualizarStatus("DOADO")
@@ -128,6 +123,7 @@ export default function ItemActions({
         )}
 
         <button
+          type="button"
           disabled={carregando}
           onClick={remover}
           className="px-4 py-2.5 rounded-xl bg-red-50 text-red-700 text-sm font-semibold hover:bg-red-100 transition disabled:opacity-50"
@@ -136,19 +132,20 @@ export default function ItemActions({
         </button>
       </div>
 
-      {carregando && (
-        <p className="text-xs text-gray-400 mt-3">
-          Atualizando anúncio...
-        </p>
-      )}
+      <div className="mt-3 min-h-5" aria-live="polite" aria-atomic="true">
+        {carregando && (
+          <p className="text-xs text-gray-500">Atualizando anúncio...</p>
+        )}
 
-      {erro && (
-        <div className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3">
-          <p className="text-sm text-red-700">
-            ⚠️ {erro}
-          </p>
-        </div>
-      )}
+        {erro && (
+          <div
+            className="rounded-xl border border-red-100 bg-red-50 p-3"
+            role="alert"
+          >
+            <p className="text-sm text-red-700">⚠️ {erro}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
