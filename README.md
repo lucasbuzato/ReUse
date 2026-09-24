@@ -1,162 +1,236 @@
-# ReUse! — Plataforma Web
+# ReUse! — catálogo e interesses em Next.js
 
-Projeto acadêmico da FIAP ON desenvolvido para a fase de desenvolvimento web da plataforma **ReUse!**, uma solução voltada à reutilização e doação de objetos.
+Aplicação acadêmica da **FIAP ON** para a Fase 6. A área escolhida da plataforma ReUse foi o **catálogo e os detalhes de itens**, com foco no fluxo de manifestação e acompanhamento de interesses entre visitantes e doadores.
 
-A aplicação não replica todo o aplicativo mobile. Ela concentra as áreas principais para acesso via navegador e demonstra a integração entre **Next.js, Prisma ORM e PostgreSQL**.
+## Links da entrega
+
+- **Repositório público:** https://github.com/lucasbuzato/ReUse
+- **Aplicação hospedada:** `PENDENTE_DE_DEPLOY`
+- **Decisões de UX e arquitetura:** [`DESIGN.md`](./DESIGN.md)
+- **Evidências de validação:** [`VALIDATION.md`](./VALIDATION.md)
+
+> O link de produção será substituído assim que o ambiente público, o PostgreSQL e as variáveis de produção forem validados ponta a ponta.
+
+## Área desenvolvida
+
+A entrega potencializa o caminho principal da ReUse:
+
+1. explorar itens disponíveis;
+2. buscar por título, descrição ou cidade;
+3. consultar detalhes do item e do doador;
+4. autenticar-se e enviar uma mensagem de interesse;
+5. receber confirmação imediata após o envio;
+6. permitir que o proprietário acompanhe novos interessados sem recarregar a página.
+
+O objetivo é reduzir o atrito entre quem deseja doar e quem pode reutilizar um objeto, preservando a privacidade dos participantes.
+
+## Conteúdos do Capítulo 4 aplicados
+
+### Route Handler contextual
+
+O endpoint `app/api/items/[id]/interests/route.ts` oferece:
+
+- `GET`: retorna dados diferentes para proprietário, visitante autenticado e pessoa anônima;
+- `POST`: valida autenticação, disponibilidade do item, autoria, tamanho da mensagem e duplicidade;
+- respostas privadas sem cache compartilhado (`Cache-Control: private, no-store`).
+
+### SWR
+
+O componente `ItemInterestPanel` usa SWR para:
+
+- aproveitar os dados iniciais renderizados no servidor;
+- revalidar ao recuperar foco;
+- preservar o último resultado durante uma falha temporária;
+- atualizar o painel do proprietário a cada **5 segundos**;
+- disparar atualização manual quando necessário.
+
+A experiência chamada de “tempo real” nesta entrega é implementada por **polling/revalidação periódica**, não por WebSocket.
+
+### React Hook Form
+
+O formulário de interesse utiliza React Hook Form para:
+
+- validação reativa de preenchimento;
+- mínimo de 10 e máximo de 500 caracteres;
+- contador da mensagem;
+- estados de envio, sucesso, falha de API e falha de conexão;
+- bloqueio do botão enquanto os dados são inválidos ou estão sendo enviados.
+
+### Mutação e revalidação
+
+Depois do `POST`, o retorno da API atualiza imediatamente o cache do visitante com `mutate(payload, { revalidate: false })`. Em seguida, uma revalidação em segundo plano confirma o estado persistido no PostgreSQL. O proprietário recebe o novo interesse no próximo ciclo de 5 segundos, sem reload da página.
+
+## Funcionalidades
+
+| Área | Funcionalidades principais |
+|---|---|
+| Catálogo | listagem de itens disponíveis, filtro por categoria, busca textual e estado vazio contextual |
+| Detalhes | imagem ou fallback, categoria, conservação, localização, status e informações do doador |
+| Interesse | formulário validado, feedback imediato, prevenção de duplicidade e confirmação persistida |
+| Painel do proprietário | contagem, nome, e-mail, mensagem, horário, atualização manual e atualização automática |
+| Autenticação | cadastro, login, sessão assinada em cookie HTTP-only e logout |
+| Anúncio | criação de item e gerenciamento de status pelo proprietário |
+| Resiliência | loading skeleton, error boundary, preservação de dados no erro de revalidação e mensagens de conexão |
+
+## Privacidade e regras por papel
+
+- **Pessoa anônima:** recebe somente a contagem total e um convite para login.
+- **Visitante autenticado:** recebe apenas o próprio interesse, nunca os dados de outros interessados.
+- **Proprietário:** recebe a lista completa de interessados do próprio item, incluindo o e-mail necessário para contato.
+- O proprietário não pode demonstrar interesse no próprio item.
+- Um usuário não pode registrar dois interesses no mesmo item.
+- Itens reservados ou doados não aceitam novos interesses.
+- Alteração de status e exclusão exigem que a sessão pertença ao proprietário.
+
+## UX e acessibilidade
+
+- layout responsivo validado em 390 px, 768 px e desktop;
+- navegação principal identificada semanticamente;
+- labels associados aos campos, autocomplete e nomes de controles;
+- foco visível e áreas de toque com pelo menos 44 px nos principais controles;
+- regiões de status e erro anunciadas por tecnologias assistivas;
+- suporte a `prefers-reduced-motion`;
+- estados de loading, vazio, erro, sucesso, anônimo e indisponível;
+- nenhuma rolagem horizontal nas larguras testadas.
 
 ## Tecnologias
 
-- **Next.js 14** — App Router, Server Components e API Routes
-- **React 18**
-- **Prisma ORM 5**
-- **PostgreSQL**
-- **Tailwind CSS**
+- **Next.js 16.3** — App Router, Server Components e Route Handlers;
+- **React 18.3**;
+- **TypeScript**;
+- **SWR 2.5**;
+- **React Hook Form 7.88**;
+- **Prisma ORM 5.22**;
+- **PostgreSQL**;
+- **Tailwind CSS 3.4**;
+- **ESLint 9** com regras do Next.js.
 
-## Funcionalidades desenvolvidas
+## Rotas principais
 
-| Rota | Tela | Objetivo |
-|---|---|---|
-| `/` | Home | Apresentar a proposta da ReUse! e exibir estatísticas consultadas no banco |
-| `/itens` | Catálogo | Listar itens disponíveis e filtrar por categoria |
-| `/itens/[id]` | Detalhes | Exibir um item, permitir manifestação de interesse e, para o dono, visualizar interessados |
-| `/itens/novo` | Anunciar item | Criar um anúncio vinculado automaticamente ao usuário autenticado |
-| `/cadastro` | Cadastro | Criar uma conta e iniciar uma sessão |
-| `/login` | Login | Validar credenciais e criar uma sessão por cookie HTTP-only |
-| `/perfil` | Perfil | Exibir dados da conta, anúncios, quantidade de interessados e ações de gerenciamento |
+| Rota | Responsabilidade |
+|---|---|
+| `/` | apresentação da plataforma e indicadores |
+| `/itens` | catálogo, categorias e busca |
+| `/itens/[id]` | detalhes, interesse e painel do proprietário |
+| `/itens/novo` | criação de anúncio autenticada |
+| `/cadastro` | criação de conta |
+| `/login` | autenticação |
+| `/perfil` | dados da conta e anúncios do usuário |
+| `/api/items/[id]/interests` | leitura por papel e criação de interesse |
 
-## Integração com Prisma
+As rotas legadas `/api/interests` e o componente `FormularioInteresse` foram mantidos para preservar compatibilidade com a versão anterior.
 
-O Prisma é utilizado tanto nos **Server Components** quanto nas **API Routes**.
+## Arquitetura resumida
 
-- Home: `count()` para estatísticas.
-- Catálogo: `findMany()` com filtros, `include` e relacionamentos.
-- Detalhes: `findUnique()` e `findMany()` para dados do item e interessados do proprietário.
-- Cadastro: `user.create()`.
-- Login: `user.findUnique()` e validação do hash da senha.
-- Anúncio: `category.findMany()` e `item.create()`.
-- Interesse: `item.findUnique()`, `interest.findUnique()` e `interest.create()`.
-- Perfil: `user.findUnique()` com itens, categorias e `_count` de interesses.
-- Gerenciamento: `item.update()` e `item.delete()` com verificação de proprietário.
+```text
+Server Component de detalhes
+        │
+        ├── Prisma/PostgreSQL: item + dados iniciais permitidos para o papel
+        │
+        └── ItemInterestPanel (Client Component)
+                │
+                ├── SWR GET /api/items/[id]/interests
+                ├── React Hook Form
+                └── POST + mutate local + revalidação
+```
 
-## Banco de dados
+## Como executar localmente
 
-O PostgreSQL possui quatro tabelas principais:
+### Pré-requisitos
 
-- `users` — contas dos usuários.
-- `categories` — categorias dos anúncios.
-- `items` — itens anunciados.
-- `interests` — manifestações de interesse em itens.
-
-Os relacionamentos são:
-
-- `users 1:N items`
-- `categories 1:N items`
-- `users 1:N interests`
-- `items 1:N interests`
-- `users N:N items`, mediado por `interests`.
-
-O relacionamento `interests(userId, itemId)` possui uma restrição única para impedir que a mesma conta manifeste interesse duas vezes no mesmo item.
-
-## Como executar
+- Node.js 20.9 ou superior;
+- PostgreSQL acessível pela aplicação;
+- npm.
 
 ### 1. Instalar dependências
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 2. Configurar o ambiente
-
-Copie `.env.example` para `.env` e informe sua conexão PostgreSQL:
 
 ```bash
 cp .env.example .env
 ```
 
-No Windows, também é possível criar o arquivo `.env` manualmente.
-
-Exemplo:
+Preencha somente no arquivo local:
 
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/reuse?schema=public"
-AUTH_SECRET="uma-chave-secreta-para-a-aplicacao"
+DATABASE_URL="postgresql://usuario:senha@host:5432/reuse?schema=public"
+AUTH_SECRET="gere-uma-chave-longa-e-aleatoria"
 ```
 
-### 3. Gerar o Prisma Client
+Não publique `.env` nem credenciais reais.
+
+### 3. Preparar o banco
 
 ```bash
-npx prisma generate
-```
-
-### 4. Aplicar as migrations
-
-Para desenvolvimento:
-
-```bash
-npx prisma migrate dev
-```
-
-Ou para aplicar migrations já existentes:
-
-```bash
+npm run prisma:generate
 npm run prisma:deploy
-```
-
-### 5. Popular o banco com dados de demonstração
-
-```bash
 npm run prisma:seed
 ```
 
-Contas criadas pelo seed:
+O seed cria duas contas exclusivamente para demonstração local:
 
 ```text
 maria@exemplo.com / 123456
 joao@exemplo.com  / 123456
 ```
 
-### 6. Executar
+### 4. Iniciar
 
 ```bash
 npm run dev
 ```
 
-Acesse `http://localhost:3000`.
+Acesse http://localhost:3000.
 
-## Segurança e regras implementadas
+## Qualidade
 
-- Senhas não são armazenadas em texto puro; são protegidas com `scrypt` e salt aleatório.
-- A sessão é armazenada em cookie `HTTP-only`, com assinatura HMAC e expiração.
-- Criar anúncios exige usuário autenticado.
-- O `ownerId` de um anúncio vem da sessão, não do formulário.
-- Manifestar interesse exige login e impede interesse no próprio anúncio.
-- O mesmo usuário não pode manifestar interesse duas vezes no mesmo item.
-- Alterar status ou excluir anúncio exige que o usuário seja o proprietário.
-- A lista de interessados é exibida apenas ao proprietário do item.
+```bash
+npm run lint       # ESLint
+npm run typecheck  # TypeScript sem emissão
+npm run build      # build de produção
+npm run check      # executa os três comandos acima
+```
 
-## Estrutura principal
+A validação funcional completa e os resultados observados estão em [`VALIDATION.md`](./VALIDATION.md).
+
+## Estrutura relevante
 
 ```text
 app/
 ├── api/
-│   ├── interests/
+│   ├── interests/                    # compatibilidade legada
 │   ├── items/
+│   │   └── [id]/interests/route.ts   # GET e POST da entrega
 │   └── users/
-├── cadastro/
 ├── itens/
-├── login/
-├── perfil/
-└── page.tsx
+│   ├── [id]/page.tsx
+│   ├── error.tsx
+│   ├── loading.tsx
+│   └── page.tsx
+└── providers.tsx                     # SWRConfig
 components/
+└── ItemInterestPanel.tsx
 lib/
+├── auth.ts
+├── interest-types.ts
+└── prisma.ts
 prisma/
 ├── migrations/
 ├── schema.prisma
 └── seed.js
 ```
 
-## Repositório
+## Banco de dados
 
-**GitHub:** `COLE_AQUI_O_LINK_DO_REPOSITORIO`
+O modelo mantém quatro entidades principais:
 
-Substitua o texto acima pelo link real do repositório antes da entrega.
+- `users` — contas de doadores e interessados;
+- `categories` — categorias dos anúncios;
+- `items` — itens publicados;
+- `interests` — mensagens de interesse.
+
+A chave única composta `interests(userId, itemId)` garante a regra de uma manifestação por usuário e item. A exclusão de um item remove seus interesses em cascata.
