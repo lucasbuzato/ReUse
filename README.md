@@ -5,11 +5,11 @@ Aplicação acadêmica da **FIAP ON** para a Fase 6. A área escolhida da plataf
 ## Links da entrega
 
 - **Repositório público:** https://github.com/lucasbuzato/ReUse
-- **Aplicação hospedada:** `PENDENTE_DE_DEPLOY`
+- **Aplicação hospedada:** https://reuse-lucasbuzatos-projects.vercel.app
 - **Decisões de UX e arquitetura:** [`DESIGN.md`](./DESIGN.md)
 - **Evidências de validação:** [`VALIDATION.md`](./VALIDATION.md)
 
-> O link de produção será substituído assim que o ambiente público, o PostgreSQL e as variáveis de produção forem validados ponta a ponta.
+> Ambiente público validado na Vercel, com PostgreSQL Neon, migrations aplicadas e variáveis de produção configuradas.
 
 ## Área desenvolvida
 
@@ -101,7 +101,7 @@ Depois do `POST`, o retorno da API atualiza imediatamente o cache do visitante c
 - **SWR 2.5**;
 - **React Hook Form 7.88**;
 - **Prisma ORM 5.22**;
-- **PostgreSQL**;
+- **PostgreSQL (Neon)** — banco gerenciado conectado pela Vercel;
 - **Tailwind CSS 3.4**;
 - **ESLint 9** com regras do Next.js.
 
