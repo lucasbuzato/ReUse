@@ -63,14 +63,23 @@ export default function FormularioNovoItem({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6"
+      aria-busy={carregando}
+    >
       {/* TÍTULO */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
+        <label
+          htmlFor="item-title"
+          className="block text-sm font-semibold text-gray-700 mb-2"
+        >
           Título do item
         </label>
 
         <input
+          id="item-title"
+          name="title"
           required
           value={form.title}
           onChange={(e) =>
@@ -86,11 +95,16 @@ export default function FormularioNovoItem({
 
       {/* DESCRIÇÃO */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
+        <label
+          htmlFor="item-description"
+          className="block text-sm font-semibold text-gray-700 mb-2"
+        >
           Descrição
         </label>
 
         <textarea
+          id="item-description"
+          name="description"
           required
           rows={5}
           value={form.description}
@@ -108,11 +122,16 @@ export default function FormularioNovoItem({
       {/* ESTADO + CATEGORIA */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <label
+            htmlFor="item-condition"
+            className="block text-sm font-semibold text-gray-700 mb-2"
+          >
             Estado de conservação
           </label>
 
           <select
+            id="item-condition"
+            name="condition"
             value={form.condition}
             onChange={(e) =>
               setForm({
@@ -129,11 +148,16 @@ export default function FormularioNovoItem({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
+          <label
+            htmlFor="item-category"
+            className="block text-sm font-semibold text-gray-700 mb-2"
+          >
             Categoria
           </label>
 
           <select
+            id="item-category"
+            name="categoryId"
             required
             value={form.categoryId}
             onChange={(e) =>
@@ -158,11 +182,19 @@ export default function FormularioNovoItem({
 
       {/* IMAGEM */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
+        <label
+          htmlFor="item-image-url"
+          className="block text-sm font-semibold text-gray-700 mb-2"
+        >
           URL da imagem
         </label>
 
         <input
+          id="item-image-url"
+          name="imageUrl"
+          inputMode="url"
+          autoComplete="url"
+          aria-describedby="item-image-url-hint"
           value={form.imageUrl}
           onChange={(e) =>
             setForm({
@@ -174,7 +206,7 @@ export default function FormularioNovoItem({
           className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-reuse-green focus:ring-2 focus:ring-green-100 transition"
         />
 
-        <p className="text-xs text-gray-400 mt-2">
+        <p id="item-image-url-hint" className="text-xs text-gray-400 mt-2">
           Opcional. Você pode inserir o endereço de uma imagem hospedada na
           internet.
         </p>
@@ -182,7 +214,11 @@ export default function FormularioNovoItem({
 
       {/* ERRO */}
       {erro && (
-        <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+        <div
+          className="bg-red-50 border border-red-100 rounded-xl p-4"
+          role="alert"
+          aria-live="assertive"
+        >
           <p className="text-sm text-red-700">
             ⚠️ {erro}
           </p>

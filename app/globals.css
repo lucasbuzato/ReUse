@@ -22,6 +22,7 @@ body {
   background: var(--reuse-bg);
   color: #1f2937;
   font-family: Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -36,13 +37,33 @@ select {
   color: #174d31;
 }
 
+:focus-visible {
+  outline: 3px solid rgba(47, 125, 90, 0.38);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @layer components {
   .reuse-card {
     @apply bg-white border border-gray-100 rounded-2xl shadow-sm;
   }
 
   .reuse-button {
-    @apply inline-flex items-center justify-center rounded-xl px-5 py-3 font-semibold transition-all duration-200;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-reuse-green focus-visible:ring-offset-2;
   }
 
   .reuse-button-primary {
@@ -50,6 +71,6 @@ select {
   }
 
   .reuse-button-secondary {
-    @apply reuse-button border border-reuse-green text-reuse-green bg-white hover:bg-reuse-greenDark;
+    @apply reuse-button border border-reuse-green bg-white text-reuse-green hover:bg-reuse-greenDark hover:text-white;
   }
 }
