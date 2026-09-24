@@ -20,8 +20,11 @@ Data da consolidação: **23/09/2026**.
 | Tailwind CSS | 3.4.19 |
 | ESLint | 9.39.5 |
 | PostgreSQL local temporário | 18.6 |
+| PostgreSQL de produção | Neon via Vercel Marketplace |
 
-A aplicação foi validada em uma cópia Linux limpa da fonte. `DATABASE_URL` apontou somente para o PostgreSQL temporário local e `AUTH_SECRET` foi gerado aleatoriamente no processo do quality gate, sem persistência em arquivo.
+O quality gate principal foi executado em uma cópia Linux limpa da fonte. Nesse ciclo, `DATABASE_URL` apontou somente para o PostgreSQL temporário local e `AUTH_SECRET` foi gerado aleatoriamente, sem persistência em arquivo.
+
+O ambiente público usa PostgreSQL Neon conectado à Vercel. `DATABASE_URL`, `DATABASE_URL_UNPOOLED` e `AUTH_SECRET` estão configuradas como variáveis protegidas; nenhum valor foi incluído no repositório.
 
 ## 3. Banco de dados
 
@@ -29,6 +32,8 @@ O comando `prisma migrate status` confirmou o schema atualizado e as duas migrat
 
 - `20260818185000_init`;
 - `20260818190000_add_interest_unique_and_cascade`.
+
+No Neon de produção, `prisma migrate deploy` aplicou as duas migrations e `prisma migrate status` confirmou **Database schema is up to date**. O seed idempotente foi executado no mesmo ambiente.
 
 Antes do quality gate final, o estado de demonstração foi restaurado e o seed idempotente foi executado. Estado confirmado depois da limpeza:
 
@@ -173,9 +178,23 @@ Resultados:
 | `docs/evidence/owner-empty-desktop.png` | 1104 × 388 | painel vazio do proprietário |
 | `docs/evidence/owner-live-update-desktop.png` | 1104 × 372 | atualização automática do painel |
 
-## 9. Limites desta validação
+## 9. Validação no ambiente público
+
+- **URL estável:** https://reuse-lucasbuzatos-projects.vercel.app
+- [x] deployment de produção com estado `Ready`;
+- [x] `/`, `/itens` e `/login` retornam HTTP `200` sem exigir conta Vercel;
+- [x] catálogo público leu do Neon os itens **Cadeira de escritório** e **Notebook usado**;
+- [x] login da conta de demonstração redirecionou para `/perfil`;
+- [x] sessão permaneceu autenticada após reload;
+- [x] nenhuma exceção de página foi observada;
+- [x] uma execução limpa das rotas públicas terminou sem resposta HTTP `4xx` ou `5xx`;
+- [x] `AUTH_SECRET` configurado separadamente para produção e previews.
+
+A validação pública concentrou-se no smoke test, leitura do banco, autenticação e persistência da sessão. Os cenários destrutivos e de mutação detalhados na seção 5 permaneceram no ambiente controlado para não alterar o estado público da demonstração.
+
+## 10. Limites desta validação
 
 - “Tempo real” significa polling/revalidação periódica com SWR, não WebSocket.
 - O quality gate e o E2E descritos acima foram executados no ambiente local controlado.
-- A URL pública ainda deve ser validada separadamente após a configuração do PostgreSQL e das variáveis de produção.
+- A bateria funcional completa descrita na seção 5 foi executada no ambiente controlado; em produção foram repetidos smoke test, leitura do Neon, login e persistência da sessão.
 - Nenhuma credencial real, `.env`, build, dependência ou dado temporário deve ser incluído no repositório.
