@@ -3,6 +3,8 @@
 - **Projeto:** ReUse
 - **Tecnologia principal:** IBM watsonx Assistant — Actions, Web Chat e extensão OpenAPI
 - **Repositório:** https://github.com/lucasbuzato/ReUse
+- **Pull request da atividade:** https://github.com/lucasbuzato/ReUse/pull/3
+- **Código da branch:** https://github.com/lucasbuzato/ReUse/tree/feat/watson-assistant-voice
 - **Aplicação:** https://reuse-lucasbuzatos-projects.vercel.app
 - **Branch da atividade:** `feat/watson-assistant-voice`
 
@@ -209,6 +211,19 @@ npm run typecheck
 npm run build
 ```
 
+## Resultado local em 24/09/2026
+
+- 16 testes descobertos, 15 aprovados, zero falhas e uma integração PostgreSQL pulada por ausência de banco local;
+- lint e TypeScript concluídos com código `0`;
+- build Webpack concluído com código `0` e as quatro rotas do Assistant reconhecidas;
+- contratos HTTP confirmados: `401` sem autenticação/chave e `403` para escopo insuficiente;
+- respostas privadas confirmadas com `Cache-Control: private, no-store`;
+- loader sem IDs IBM confirmado como desabilitado, sem carregar script externo;
+- zero erros de console e zero `pageerror` no smoke test Playwright;
+- nenhum segredo real encontrado na varredura dos 34 arquivos do commit.
+
+O teste PostgreSQL e o build padrão em checkout normal ficam a cargo da CI do [PR #3](https://github.com/lucasbuzato/ReUse/pull/3). As validações realizadas e suas limitações estão detalhadas em `VALIDATION.md`.
+
 # Configuração e evidência na IBM
 
 As etapas que exigem conta pessoal estão detalhadas em `docs/IBM-WATSON-SETUP.md`:
@@ -240,6 +255,7 @@ As etapas que exigem conta pessoal estão detalhadas em `docs/IBM-WATSON-SETUP.m
 - [x] Catálogo com automações e orientações.
 - [x] Loader do Web Chat condicionado às variáveis públicas.
 - [x] Testes automatizados de segurança e domínio.
+- [x] Branch e pull request próprios para a Atividade 02.
 - [ ] Extensão importada na conta IBM.
 - [ ] Actions montadas e aprovadas no Preview.
 - [ ] Identificadores do Web Chat configurados na Vercel.
@@ -249,6 +265,8 @@ As etapas que exigem conta pessoal estão detalhadas em `docs/IBM-WATSON-SETUP.m
 # Referências
 
 - Repositório: https://github.com/lucasbuzato/ReUse
+- Pull request: https://github.com/lucasbuzato/ReUse/pull/3
+- Código da branch: https://github.com/lucasbuzato/ReUse/tree/feat/watson-assistant-voice
 - Aplicação: https://reuse-lucasbuzatos-projects.vercel.app
 - Extensões IBM: https://cloud.ibm.com/docs/watson-assistant?topic=watson-assistant-build-custom-extension
 - Chamada de extensão: https://cloud.ibm.com/docs/watson-assistant?topic=watson-assistant-call-extension

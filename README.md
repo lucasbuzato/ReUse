@@ -9,6 +9,7 @@ Aplicação acadêmica da **FIAP ON** para a Fase 6. A área escolhida da plataf
 - **Decisões de UX e arquitetura:** [`DESIGN.md`](./DESIGN.md)
 - **Evidências de validação:** [`VALIDATION.md`](./VALIDATION.md)
 - **Atividade 02 — IBM watsonx Assistant:** [`docs/ATIVIDADE-02-WATSON.md`](./docs/ATIVIDADE-02-WATSON.md)
+- **PDF final da Atividade 02:** [`docs/Atividade-02-ReUse-Watson.pdf`](./docs/Atividade-02-ReUse-Watson.pdf)
 - **Configuração da conta IBM:** [`docs/IBM-WATSON-SETUP.md`](./docs/IBM-WATSON-SETUP.md)
 - **OpenAPI importável:** [`watson/reuse-assistant-extension.openapi.json`](./watson/reuse-assistant-extension.openapi.json)
 
