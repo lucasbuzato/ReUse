@@ -226,9 +226,23 @@ Resultados observados:
 - [x] quatro Route Handlers do Assistant reconhecidos pelo build;
 - [x] nenhum banco ou segredo de produção usado na validação.
 
-O build recebeu valores locais descartáveis e uma URL de banco propositalmente inacessível. As páginas que possuem fallback registraram mensagens de conexão do Prisma durante a geração, mas o build terminou normalmente. O build padrão com Turbopack não pôde ser validado neste clone porque `node_modules` é um link simbólico para fora da raiz permitida pelo MCP; a CI usa um checkout normal e é a evidência prevista para esse caminho.
+O build local recebeu valores descartáveis e uma URL de banco propositalmente inacessível. As páginas que possuem fallback registraram mensagens de conexão do Prisma durante a geração, mas o build terminou normalmente. O build padrão com Turbopack não pôde ser executado neste clone porque `node_modules` é um link simbólico para fora da raiz permitida pelo MCP; essa limitação foi coberta pela CI abaixo.
 
-O teste de integração real usa o PostgreSQL efêmero da CI com `RUN_DATABASE_TESTS=1`. Ele cria dados temporários, comprova o isolamento entre dois proprietários, testa pausa e reativação e remove os registros ao final.
+#### 11.1.1 Evidência da CI do PR #3
+
+A [execução 36080455646](https://github.com/lucasbuzato/ReUse/actions/runs/36080455646), no commit [`7bd3057`](https://github.com/lucasbuzato/ReUse/commit/7bd30573010bcacbb9c7cad87fc9f8f1f14febe3), terminou com `success`:
+
+- [x] serviço `postgres:16-alpine` inicializado e saudável;
+- [x] migrations aplicadas antes do quality gate;
+- [x] `RUN_DATABASE_TESTS=1` habilitado;
+- [x] 16 testes executados, 16 aprovados, zero falhas e zero pulos;
+- [x] integração real validou isolamento entre proprietários, pausa e reativação com dados temporários;
+- [x] ESLint e TypeScript aprovados;
+- [x] `npm run build` executou o build padrão `next build`, identificado no log como Turbopack, com sucesso;
+- [x] job [“Lint, tipos e build”](https://github.com/lucasbuzato/ReUse/actions/runs/36080455646/job/107901029378) concluído com `success`;
+- [x] status combinado do commit igual a `success` e deployment Vercel concluído.
+
+A CI usou somente o PostgreSQL efêmero do próprio job e valores descartáveis de automação; nenhum banco ou segredo de produção foi utilizado.
 
 ### 11.2 Contratos HTTP locais
 
@@ -258,10 +272,8 @@ Playwright confirmou em `http://127.0.0.1:3010/login`:
 
 ### 11.4 Validações ainda externas
 
-Dependem da conta IBM ou da infraestrutura da pull request:
+A infraestrutura da pull request já foi validada. Permanecem somente as etapas que dependem da conta IBM:
 
-- [ ] teste de integração PostgreSQL na CI;
-- [ ] build padrão com Turbopack em checkout normal;
 - [ ] importação da extensão na IBM;
 - [ ] Preview, Inspector e Publish das Actions;
 - [ ] widget real com os IDs do Web Chat;

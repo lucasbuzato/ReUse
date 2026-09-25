@@ -222,7 +222,21 @@ npm run build
 - zero erros de console e zero `pageerror` no smoke test Playwright;
 - nenhum segredo real encontrado na varredura dos 34 arquivos do commit.
 
-O teste PostgreSQL e o build padrão em checkout normal ficam a cargo da CI do [PR #3](https://github.com/lucasbuzato/ReUse/pull/3). As validações realizadas e suas limitações estão detalhadas em `VALIDATION.md`.
+As validações locais e suas limitações estão detalhadas em `VALIDATION.md`.
+
+## Resultado da CI do PR #3
+
+A [execução 36080455646](https://github.com/lucasbuzato/ReUse/actions/runs/36080455646), vinculada ao commit [`7bd3057`](https://github.com/lucasbuzato/ReUse/commit/7bd30573010bcacbb9c7cad87fc9f8f1f14febe3), concluiu com `success`:
+
+- PostgreSQL 16 efêmero inicializado e migrations aplicadas;
+- `RUN_DATABASE_TESTS=1`, com 16 testes aprovados, zero falhas e zero pulos;
+- integração real de isolamento entre proprietários, pausa e reativação executada;
+- lint e TypeScript aprovados;
+- build padrão `next build` concluído com Turbopack;
+- job [“Lint, tipos e build”](https://github.com/lucasbuzato/ReUse/actions/runs/36080455646/job/107901029378) aprovado;
+- status Vercel do commit em `success`, com deployment concluído.
+
+A CI usou somente infraestrutura efêmera e valores descartáveis; nenhum banco ou segredo de produção foi utilizado.
 
 # Configuração e evidência na IBM
 
@@ -255,6 +269,8 @@ As etapas que exigem conta pessoal estão detalhadas em `docs/IBM-WATSON-SETUP.m
 - [x] Catálogo com automações e orientações.
 - [x] Loader do Web Chat condicionado às variáveis públicas.
 - [x] Testes automatizados de segurança e domínio.
+- [x] Integração PostgreSQL real aprovada na CI, sem testes pulados.
+- [x] Build padrão Turbopack aprovado na CI.
 - [x] Branch e pull request próprios para a Atividade 02.
 - [ ] Extensão importada na conta IBM.
 - [ ] Actions montadas e aprovadas no Preview.
