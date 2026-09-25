@@ -8,6 +8,10 @@ Aplicação acadêmica da **FIAP ON** para a Fase 6. A área escolhida da plataf
 - **Aplicação hospedada:** https://reuse-lucasbuzatos-projects.vercel.app
 - **Decisões de UX e arquitetura:** [`DESIGN.md`](./DESIGN.md)
 - **Evidências de validação:** [`VALIDATION.md`](./VALIDATION.md)
+- **Atividade 02 — IBM watsonx Assistant:** [`docs/ATIVIDADE-02-WATSON.md`](./docs/ATIVIDADE-02-WATSON.md)
+- **PDF final da Atividade 02:** [`docs/Atividade-02-ReUse-Watson.pdf`](./docs/Atividade-02-ReUse-Watson.pdf)
+- **Configuração da conta IBM:** [`docs/IBM-WATSON-SETUP.md`](./docs/IBM-WATSON-SETUP.md)
+- **OpenAPI importável:** [`watson/reuse-assistant-extension.openapi.json`](./watson/reuse-assistant-extension.openapi.json)
 
 > Ambiente público validado na Vercel, com PostgreSQL Neon, migrations aplicadas e variáveis de produção configuradas.
 
@@ -71,6 +75,7 @@ Depois do `POST`, o retorno da API atualiza imediatamente o cache do visitante c
 | Autenticação | cadastro, login, sessão assinada em cookie HTTP-only e logout |
 | Anúncio | criação de item e gerenciamento de status pelo proprietário |
 | Resiliência | loading skeleton, error boundary, preservação de dados no erro de revalidação e mensagens de conexão |
+| Assistente IBM | Web Chat, orientações determinísticas e automações seguras para consultar, pausar e reativar anúncios |
 
 ## Privacidade e regras por papel
 
@@ -79,7 +84,7 @@ Depois do `POST`, o retorno da API atualiza imediatamente o cache do visitante c
 - **Proprietário:** recebe a lista completa de interessados do próprio item, incluindo o e-mail necessário para contato.
 - O proprietário não pode demonstrar interesse no próprio item.
 - Um usuário não pode registrar dois interesses no mesmo item.
-- Itens reservados ou doados não aceitam novos interesses.
+- Itens pausados, reservados ou doados não aceitam novos interesses.
 - Alteração de status e exclusão exigem que a sessão pertença ao proprietário.
 
 ## UX e acessibilidade
@@ -103,7 +108,8 @@ Depois do `POST`, o retorno da API atualiza imediatamente o cache do visitante c
 - **Prisma ORM 5.22**;
 - **PostgreSQL (Neon)** — banco gerenciado conectado pela Vercel;
 - **Tailwind CSS 3.4**;
-- **ESLint 9** com regras do Next.js.
+- **ESLint 9** com regras do Next.js;
+- **IBM watsonx Assistant** — Actions, Web Chat e extensão customizada OpenAPI 3.0.
 
 ## Rotas principais
 
@@ -117,6 +123,10 @@ Depois do `POST`, o retorno da API atualiza imediatamente o cache do visitante c
 | `/login` | autenticação |
 | `/perfil` | dados da conta e anúncios do usuário |
 | `/api/items/[id]/interests` | leitura por papel e criação de interesse |
+| `/api/assistant/session` | token curto da conta conectada para o Web Chat |
+| `/api/assistant/actions/items/summary` | resumo dos anúncios do proprietário |
+| `/api/assistant/actions/items/pause` | pausa em lote dos anúncios disponíveis do proprietário |
+| `/api/assistant/actions/items/reactivate` | reativação em lote dos anúncios pausados do proprietário |
 
 As rotas legadas `/api/interests` e o componente `FormularioInteresse` foram mantidos para preservar compatibilidade com a versão anterior.
 
@@ -159,6 +169,13 @@ Preencha somente no arquivo local:
 ```env
 DATABASE_URL="postgresql://usuario:senha@host:5432/reuse?schema=public"
 AUTH_SECRET="gere-uma-chave-longa-e-aleatoria"
+ASSISTANT_ACTION_SECRET="outro-segredo-com-pelo-menos-32-caracteres"
+ASSISTANT_EXTENSION_API_KEY="chave-configurada-tambem-na-extensao-IBM"
+
+# Públicos, copiados do snippet de Embed do Web Chat
+NEXT_PUBLIC_IBM_ASSISTANT_INTEGRATION_ID=""
+NEXT_PUBLIC_IBM_ASSISTANT_REGION=""
+NEXT_PUBLIC_IBM_ASSISTANT_SERVICE_INSTANCE_ID=""
 ```
 
 Não publique `.env` nem credenciais reais.
@@ -189,10 +206,11 @@ Acesse http://localhost:3000.
 ## Qualidade
 
 ```bash
+npm test           # testes de segurança, domínio e artefatos Watson
 npm run lint       # ESLint
 npm run typecheck  # TypeScript sem emissão
 npm run build      # build de produção
-npm run check      # executa os três comandos acima
+npm run check      # testes + lint + tipos + build
 ```
 
 A validação funcional completa e os resultados observados estão em [`VALIDATION.md`](./VALIDATION.md).

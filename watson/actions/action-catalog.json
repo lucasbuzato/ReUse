@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "assistant": {
+    "name": "ReUse com voz",
+    "language": "pt-BR",
+    "baseline": "Actions estruturadas e determinísticas",
+    "generativeFallbackRequired": false
+  },
+  "sessionVariables": [
+    {
+      "name": "reuse_authenticated",
+      "type": "boolean",
+      "source": "Web Chat pre:send",
+      "sensitive": false
+    },
+    {
+      "name": "reuse_action_token",
+      "type": "string",
+      "source": "Web Chat pre:send",
+      "sensitive": true,
+      "retention": "Somente durante a sessão; validade máxima de 10 minutos"
+    },
+    {
+      "name": "reuse_token_expires_at",
+      "type": "string",
+      "source": "Web Chat pre:send",
+      "sensitive": false
+    },
+    {
+      "name": "reuse_user_name",
+      "type": "string",
+      "source": "Web Chat pre:send",
+      "sensitive": false
+    }
+  ],
+  "actions": [
+    {
+      "id": "pause-my-items",
+      "name": "Pausar meus anúncios disponíveis",
+      "category": "automation",
+      "examples": [
+        "Quero pausar minhas ofertas ativas",
+        "Pause todos os meus anúncios",
+        "Deixe meus itens indisponíveis por enquanto",
+        "Quero dar uma pausa nas minhas ofertas",
+        "Pausar itens publicados",
+        "Desative temporariamente meus anúncios",
+        "Não quero receber novos interesses agora",
+        "Pode pausar tudo que está disponível?"
+      ],
+      "steps": [
+        {
+          "type": "condition",
+          "expression": "reuse_authenticated != true",
+          "response": "Para alterar seus anúncios, entre na sua conta do ReUse e abra o assistente novamente.",
+          "endAction": true
+        },
+        {
+          "type": "extension",
+          "operationId": "getMyItemsSummary",
+          "inputs": {
+            "X-ReUse-Action-Token": "reuse_action_token"
+          },
+          "resultVariable": "items_summary"
+        },
+        {
+          "type": "condition",
+          "expression": "items_summary.counts.available == 0",
+          "response": "Você não tem anúncios disponíveis para pausar.",
+          "endAction": true
+        },
+        {
+          "type": "confirmation",
+          "prompt": "Encontrei ${items_summary.counts.available} anúncio(s) disponível(is). Quer pausar todos agora?",
+          "declineResponse": "Tudo bem. Nenhum anúncio foi alterado."
+        },
+        {
+          "type": "extension",
+          "operationId": "pauseMyAvailableItems",
+          "inputs": {
+            "X-ReUse-Action-Token": "reuse_action_token"
+          },
+          "resultVariable": "pause_result"
+        },
+        {
+          "type": "response",
+          "text": "${pause_result.message} Você pode reativá-los quando quiser pelo perfil ou por este assistente."
+        }
+      ]
+    },
+    {
+      "id": "reactivate-my-items",
+      "name": "Reativar meus anúncios pausados",
+      "category": "automation",
+      "examples": [
+        "Reative meus anúncios",
+        "Quero publicar de novo os itens pausados",
+        "Volte a deixar minhas ofertas disponíveis",
+        "Reativar tudo que está pausado",
+        "Pode liberar meus anúncios novamente?",
+        "Tirar meus itens da pausa"
+      ],
+      "steps": [
+        {
+          "type": "condition",
+          "expression": "reuse_authenticated != true",
+          "response": "Para reativar seus anúncios, entre na sua conta do ReUse e abra o assistente novamente.",
+          "endAction": true
+        },
+        {
+          "type": "extension",
+          "operationId": "getMyItemsSummary",
+          "inputs": {
+            "X-ReUse-Action-Token": "reuse_action_token"
+          },
+          "resultVariable": "items_summary"
+        },
+        {
+          "type": "condition",
+          "expression": "items_summary.counts.paused == 0",
+          "response": "Você não tem anúncios pausados para reativar.",
+          "endAction": true
+        },
+        {
+          "type": "confirmation",
+          "prompt": "Encontrei ${items_summary.counts.paused} anúncio(s) pausado(s). Quer reativar todos agora?",
+          "declineResponse": "Tudo bem. Nenhum anúncio foi alterado."
+        },
+        {
+          "type": "extension",
+          "operationId": "reactivateMyPausedItems",
+          "inputs": {
+            "X-ReUse-Action-Token": "reuse_action_token"
+          },
+          "resultVariable": "reactivate_result"
+        },
+        {
+          "type": "response",
+          "text": "${reactivate_result.message} Eles voltaram a aparecer no catálogo."
+        }
+      ]
+    },
+    {
+      "id": "help-publish-item",
+      "name": "Como anunciar um item",
+      "category": "guidance",
+      "examples": [
+        "Como cadastrar um novo item?",
+        "Quero anunciar algo",
+        "Como publico uma oferta?",
+        "Onde cadastro um objeto para troca?",
+        "Me ensine a colocar um item no ReUse"
+      ],
+      "response": "1. Entre na sua conta. 2. Selecione Anunciar no menu ou Novo anúncio no perfil. 3. Informe título, descrição, conservação e categoria. 4. Se quiser, adicione a URL de uma imagem. 5. Selecione Publicar anúncio. O item aparecerá no catálogo como Disponível."
+    },
+    {
+      "id": "help-find-items",
+      "name": "Como encontrar itens",
+      "category": "guidance",
+      "examples": [
+        "Como encontro um item?",
+        "Onde posso pesquisar ofertas?",
+        "Como filtro por categoria?",
+        "Quero procurar livros",
+        "Como buscar por cidade?"
+      ],
+      "response": "Abra Explorar. Use a busca para procurar por nome, descrição ou cidade e use os botões de categoria para refinar os resultados. O catálogo mostra somente itens disponíveis."
+    },
+    {
+      "id": "help-show-interest",
+      "name": "Como demonstrar interesse",
+      "category": "guidance",
+      "examples": [
+        "Como demonstro interesse?",
+        "Quero falar com quem anunciou",
+        "Como pedir um item?",
+        "Onde envio uma mensagem de interesse?",
+        "Posso me interessar por uma oferta?"
+      ],
+      "response": "Entre na sua conta, abra um item disponível e escreva uma mensagem com 10 a 500 caracteres na área de interesse. Você pode enviar um interesse por item e não pode se interessar pelo próprio anúncio."
+    },
+    {
+      "id": "help-manage-items",
+      "name": "Como gerenciar anúncios",
+      "category": "guidance",
+      "examples": [
+        "Como gerencio meus anúncios?",
+        "Onde vejo os interessados?",
+        "Como marco um item como doado?",
+        "Como pauso uma oferta?",
+        "Como reservo um item?"
+      ],
+      "response": "Abra Perfil e localize Meus anúncios. Em cada item você pode pausar, reativar, reservar, marcar como doado ou excluir. Ao abrir o anúncio, também verá as mensagens e os contatos das pessoas interessadas."
+    },
+    {
+      "id": "help-statuses",
+      "name": "Entender os status dos anúncios",
+      "category": "guidance",
+      "examples": [
+        "O que significa pausado?",
+        "Qual a diferença entre reservado e doado?",
+        "Quais são os status de um item?",
+        "Um item pausado aparece no catálogo?"
+      ],
+      "response": "Disponível aparece no catálogo e aceita interesses. Pausado fica oculto temporariamente e pode ser reativado. Reservado indica que a entrega ou troca está em andamento. Doado indica que o processo foi concluído."
+    },
+    {
+      "id": "help-privacy-security",
+      "name": "Privacidade e segurança",
+      "category": "guidance",
+      "examples": [
+        "Meus dados estão seguros?",
+        "O assistente pode alterar itens de outra pessoa?",
+        "Quais dados devo compartilhar?",
+        "Como funciona a segurança do chat?"
+      ],
+      "response": "O assistente só altera anúncios da conta conectada e pede confirmação antes de mudanças em lote. Nunca informe senha no chat. Combine entrega em local seguro e evite compartilhar documentos, dados bancários ou informações pessoais desnecessárias."
+    }
+  ]
+}

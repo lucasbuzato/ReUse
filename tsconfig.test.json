@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": ".test-dist",
+    "rootDir": ".",
+    "target": "ES2022"
+  },
+  "include": [
+    "lib/assistant-action-token.ts",
+    "lib/assistant-request-auth.ts",
+    "lib/assistant-item-actions.ts",
+    "lib/item-status.ts",
+    "lib/prisma-assistant-item-store.ts",
+    "tests/**/*.test.ts"
+  ]
+}
