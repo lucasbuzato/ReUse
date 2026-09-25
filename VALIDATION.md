@@ -65,7 +65,7 @@ Resultado em **23/09/2026**:
 - [x] Route Handlers e páginas dinâmicas reconhecidos pelo build;
 - [x] processo encerrado com código `0`.
 
-O script `npm run check` executa, em sequência, `npm run lint`, `npm run typecheck` e `npm run build`.
+Na consolidação de 23/09, o script `npm run check` executava lint, tipos e build. Após a Atividade 02, ele passou a executar, em sequência, `npm test`, `npm run lint`, `npm run typecheck` e `npm run build`.
 
 ## 5. Validação funcional ponta a ponta
 
@@ -198,3 +198,71 @@ A validação pública concentrou-se no smoke test, leitura do banco, autentica�
 - O quality gate e o E2E descritos acima foram executados no ambiente local controlado.
 - A bateria funcional completa descrita na seção 5 foi executada no ambiente controlado; em produção foram repetidos smoke test, leitura do Neon, login e persistência da sessão.
 - Nenhuma credencial real, `.env`, build, dependência ou dado temporário deve ser incluído no repositório.
+
+## 11. Atividade 02 — IBM watsonx Assistant
+
+Data da validação local: **24/09/2026**.
+
+### 11.1 Quality gate
+
+Foram executados:
+
+```bash
+npm test
+npm run lint
+npm run typecheck
+npx next build --webpack
+```
+
+Resultados observados:
+
+- [x] 16 testes descobertos;
+- [x] 15 testes aprovados;
+- [x] zero falhas;
+- [x] um teste de integração PostgreSQL pulado localmente por não haver banco efêmero disponível;
+- [x] ESLint concluído com código `0`;
+- [x] TypeScript concluído com código `0`;
+- [x] build Webpack concluído com código `0`;
+- [x] quatro Route Handlers do Assistant reconhecidos pelo build;
+- [x] nenhum banco ou segredo de produção usado na validação.
+
+O build recebeu valores locais descartáveis e uma URL de banco propositalmente inacessível. As páginas que possuem fallback registraram mensagens de conexão do Prisma durante a geração, mas o build terminou normalmente. O build padrão com Turbopack não pôde ser validado neste clone porque `node_modules` é um link simbólico para fora da raiz permitida pelo MCP; a CI usa um checkout normal e é a evidência prevista para esse caminho.
+
+O teste de integração real usa o PostgreSQL efêmero da CI com `RUN_DATABASE_TESTS=1`. Ele cria dados temporários, comprova o isolamento entre dois proprietários, testa pausa e reativação e remove os registros ao final.
+
+### 11.2 Contratos HTTP locais
+
+Um servidor de produção local isolado foi iniciado com banco inválido e credenciais descartáveis. Foram confirmados:
+
+| Cenário | Resultado |
+|---|---|
+| `POST /api/assistant/session` sem login | HTTP `401` |
+| resumo sem chave da extensão | HTTP `401` |
+| resumo com chave incorreta | HTTP `401` |
+| pausa com token válido, mas sem escopo `items:pause` | HTTP `403` |
+| respostas acima | `Cache-Control: private, no-store` |
+
+O token descartável usado no cenário de escopo não foi impresso. Nenhuma chamada alcançou o banco.
+
+### 11.3 Interface e loader do Web Chat
+
+Playwright confirmou em `http://127.0.0.1:3010/login`:
+
+- [x] HTTP `200`;
+- [x] título e formulário de login renderizados;
+- [x] estado interno do loader igual a `disabled` sem os três IDs IBM;
+- [x] nenhum script do Watson carregado quando a integração não está configurada;
+- [x] zero erros de console;
+- [x] zero `pageerror`;
+- [x] nenhuma rolagem horizontal.
+
+### 11.4 Validações ainda externas
+
+Dependem da conta IBM ou da infraestrutura da pull request:
+
+- [ ] teste de integração PostgreSQL na CI;
+- [ ] build padrão com Turbopack em checkout normal;
+- [ ] importação da extensão na IBM;
+- [ ] Preview, Inspector e Publish das Actions;
+- [ ] widget real com os IDs do Web Chat;
+- [ ] evidências visuais da conta IBM, sempre com tokens e chaves ocultos.

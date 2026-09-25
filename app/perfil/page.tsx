@@ -194,6 +194,7 @@ export default async function PerfilPage() {
             {usuario.items.map((item) => {
               const status = {
                 DISPONIVEL: "bg-green-100 text-green-700",
+                PAUSADO: "bg-slate-100 text-slate-700",
                 RESERVADO: "bg-yellow-100 text-yellow-700",
                 DOADO: "bg-gray-100 text-gray-600",
               }[item.status] ?? "bg-gray-100 text-gray-600";
@@ -218,9 +219,11 @@ export default async function PerfilPage() {
                         >
                           {item.status === "DISPONIVEL"
                             ? "Disponível"
-                            : item.status === "RESERVADO"
-                            ? "Reservado"
-                            : "Doado"}
+                            : item.status === "PAUSADO"
+                              ? "Pausado"
+                              : item.status === "RESERVADO"
+                                ? "Reservado"
+                                : "Doado"}
                         </span>
                       </div>
 

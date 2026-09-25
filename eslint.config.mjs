@@ -13,6 +13,7 @@ export default defineConfig([
   },
   globalIgnores([
     ".next/**",
+    ".test-dist/**",
     "out/**",
     "build/**",
     "coverage/**",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { isItemStatus } from "@/lib/item-status";
 
 type RouteContext = {
   params: Promise<{
@@ -106,13 +107,7 @@ export async function PATCH(
     const body = await req.json();
     const { status } = body;
 
-    const allowedStatuses = [
-      "DISPONIVEL",
-      "RESERVADO",
-      "DOADO",
-    ];
-
-    if (!allowedStatuses.includes(status)) {
+    if (!isItemStatus(status)) {
       return NextResponse.json(
         { error: "Status inválido." },
         { status: 400 }

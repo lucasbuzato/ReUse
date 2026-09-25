@@ -1,0 +1,303 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ReUse Assistant Actions API",
+    "version": "1.0.0",
+    "description": "Operações seguras usadas pelo IBM watsonx Assistant para consultar, pausar e reativar anúncios do usuário autenticado no ReUse."
+  },
+  "servers": [
+    {
+      "url": "https://reuse-lucasbuzatos-projects.vercel.app",
+      "description": "Produção do ReUse"
+    }
+  ],
+  "security": [
+    {
+      "ReUseExtensionApiKey": []
+    }
+  ],
+  "paths": {
+    "/api/assistant/actions/items/summary": {
+      "get": {
+        "operationId": "getMyItemsSummary",
+        "summary": "Consultar meus anúncios",
+        "description": "Retorna apenas os anúncios pertencentes ao usuário representado pelo token curto da sessão.",
+        "parameters": [
+          {
+            "name": "X-ReUse-Action-Token",
+            "in": "header",
+            "required": true,
+            "description": "Mapeie para a variável de sessão reuse_action_token recebida do Web Chat.",
+            "schema": {
+              "type": "string",
+              "minLength": 32
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumo carregado com sucesso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemsSummaryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/assistant/actions/items/pause": {
+      "post": {
+        "operationId": "pauseMyAvailableItems",
+        "summary": "Pausar meus anúncios disponíveis",
+        "description": "Troca de DISPONIVEL para PAUSADO todos os anúncios que pertencem ao usuário autenticado. A operação é idempotente.",
+        "parameters": [
+          {
+            "name": "X-ReUse-Action-Token",
+            "in": "header",
+            "required": true,
+            "description": "Mapeie para a variável de sessão reuse_action_token recebida do Web Chat.",
+            "schema": {
+              "type": "string",
+              "minLength": 32
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operação concluída, inclusive quando não havia anúncios elegíveis.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemsMutationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/assistant/actions/items/reactivate": {
+      "post": {
+        "operationId": "reactivateMyPausedItems",
+        "summary": "Reativar meus anúncios pausados",
+        "description": "Troca de PAUSADO para DISPONIVEL todos os anúncios que pertencem ao usuário autenticado. A operação é idempotente.",
+        "parameters": [
+          {
+            "name": "X-ReUse-Action-Token",
+            "in": "header",
+            "required": true,
+            "description": "Mapeie para a variável de sessão reuse_action_token recebida do Web Chat.",
+            "schema": {
+              "type": "string",
+              "minLength": 32
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operação concluída, inclusive quando não havia anúncios elegíveis.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemsMutationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ReUseExtensionApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-ReUse-Extension-Key",
+        "description": "Chave estática configurada no watsonx Assistant e no ambiente do ReUse."
+      }
+    },
+    "schemas": {
+      "ItemSnapshot": {
+        "type": "object",
+        "required": ["id", "title", "status", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["DISPONIVEL", "PAUSADO", "RESERVADO", "DOADO"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StatusCounts": {
+        "type": "object",
+        "required": ["available", "paused", "reserved", "donated", "other"],
+        "properties": {
+          "available": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "paused": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reserved": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "donated": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "other": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ItemsSummaryResponse": {
+        "type": "object",
+        "required": ["ok", "total", "counts", "activeItems", "pausedItems", "message"],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "counts": {
+            "$ref": "#/components/schemas/StatusCounts"
+          },
+          "activeItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemSnapshot"
+            }
+          },
+          "pausedItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemSnapshot"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ItemsMutationResponse": {
+        "type": "object",
+        "required": ["ok", "operation", "affectedCount", "items", "message"],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["pause", "reactivate"]
+          },
+          "affectedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemSnapshot"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["ok", "error", "message"],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Chave da extensão ausente/incorreta ou token de ação ausente, inválido ou expirado.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "O token não possui o escopo exigido pela operação.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unavailable": {
+        "description": "A integração ainda não foi configurada no ambiente.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}
