@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-28T23:18:35.786Z",
+  "generatedAt": "2026-09-28T23:50:19.587Z",
   "baseURL": "https://reuse-git-feat-watson-assistant-voice-lucasbuzatos-projects.vercel.app",
-  "commit": "cbe507db0df595c69c7a3a8d26f90228d600791e",
-  "runId": "36497179355",
+  "commit": "5085ea2f3b05605fb1d321fbe4eded6c20365348",
+  "runId": "36499967364",
   "checks": {
     "fixture": {
       "ok": true,
@@ -11,6 +11,10 @@
     },
     "guidance": {
       "ok": true
+    },
+    "voice": {
+      "ok": true,
+      "locale": "pt-BR"
     }
   },
   "pageErrors": [],
@@ -18,8 +22,20 @@
     {
       "page": "chat-a",
       "message": "Failed to load resource: the server responded with a status of 401 ()"
+    },
+    {
+      "page": "perfil-b",
+      "message": "[Chat] Failed to track events TypeError: Failed to fetch\n    at yt.fetch (https://web-chat.global.assistant.watson.appdomain.cloud/versions/latest/WatsonAssistantChatEntry.js:1:19993)\n    at https://web-chat.global.assistant.watson.appdomain.cloud/versions/8.12.6/chat~cds-ai-chat-bootstrap.js:2:226033"
+    },
+    {
+      "page": "chat-a",
+      "message": "[Chat] Failed to track events TypeError: Failed to fetch\n    at yt.fetch (https://web-chat.global.assistant.watson.appdomain.cloud/versions/latest/WatsonAssistantChatEntry.js:1:19993)\n    at https://web-chat.global.assistant.watson.appdomain.cloud/versions/8.12.6/chat~cds-ai-chat-bootstrap.js:2:226033"
+    },
+    {
+      "page": "chat-a",
+      "message": "[Chat] Failed to track events TypeError: Failed to fetch\n    at yt.fetch (https://web-chat.global.assistant.watson.appdomain.cloud/versions/latest/WatsonAssistantChatEntry.js:1:19993)\n    at https://web-chat.global.assistant.watson.appdomain.cloud/versions/8.12.6/chat~cds-ai-chat-bootstrap.js:2:226033"
     }
   ],
   "ok": false,
-  "failure": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('[data-testid=\"watson-assistant-voice\"]')\n    - locator resolved to <button type=\"button\" data-state=\"idle\" aria-pressed=\"false\" title=\"Falar com o Assistente ReUse\" data-testid=\"watson-assistant-voice\" aria-label=\"Falar com o Assistente ReUse\" class=\"fixed bottom-24 right-5 z-[9998] flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2F7D5A]/30 disabled:cursor-wait disabled:opacity-70 bg-[#2F7D5A] hover:bg-[#20563E]\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"WACInputContainer WACInputContainer--hasFocus\">…</div> from <div>…</div> subtree intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"WACInputContainer WACInputContainer--hasFocus\">…</div> from <div>…</div> subtree intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    58 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div class=\"WACInputContainer WACInputContainer--hasFocus\">…</div> from <div>…</div> subtree intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+  "failure": "Texto não encontrado no chat: Quer pausar todos agora?. Último conteúdo: lecione Anunciar no menu ou Novo anúncio no perfil. 3. Informe título, descrição, conservação e categoria. 4. Se quiser, adicione a URL de uma imagem. 5. Selecione Publicar anúncio. O item aparecerá no catálogo como Disponível. 23:50 Assistente ReUse disse Não consegui consultar seus anúncios agora. Entre novamente na sua conta e tente de novo; nunca envie sua senha pelo chat. Digite alguma coisa... Clique para enviar a mensagem Desenvolvido com IBM watsonx . A página da web não está disponível."
 }
