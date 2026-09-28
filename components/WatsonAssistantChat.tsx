@@ -28,6 +28,15 @@ type WebChatInstance = {
     handler: (event: WebChatEvent) => void | Promise<void>;
   }): void;
   render(): void | Promise<void>;
+  updateHomeScreenConfig?(config: {
+    is_on: boolean;
+    greeting: string;
+    starters: {
+      is_on: boolean;
+      buttons: Array<{ label: string }>;
+    };
+  }): void | Promise<void>;
+  updateLocale?(locale: string, savePreference?: boolean): void | Promise<void>;
   updateUserID(userId: string): void;
   updateCSSVariables?(variables: Record<string, string>): void;
 };
@@ -144,6 +153,22 @@ export default function WatsonAssistantChat() {
       serviceInstanceID,
       clientVersion,
       async onLoad(instance) {
+        await instance.updateLocale?.("pt-BR");
+        await instance.updateHomeScreenConfig?.({
+          is_on: true,
+          greeting:
+            "Olá! Sou o Assistente ReUse. Posso ajudar você a anunciar, encontrar e gerenciar itens. Como posso ajudar?",
+          starters: {
+            is_on: true,
+            buttons: [
+              { label: "Como cadastrar um novo item?" },
+              { label: "Como encontrar itens?" },
+              { label: "Como demonstrar interesse?" },
+              { label: "Como gerenciar anúncios?" },
+            ],
+          },
+        });
+
         const currentIdentity = await getIdentity();
 
         if (currentIdentity) {
@@ -158,9 +183,9 @@ export default function WatsonAssistantChat() {
         });
 
         instance.updateCSSVariables?.({
-          "$focus": "#2f8f5b",
-          "$interactive-01": "#2f8f5b",
-          "$interactive-02": "#216b43",
+          "$focus": "#2F7D5A",
+          "$interactive-01": "#2F7D5A",
+          "$interactive-02": "#20563E",
         });
 
         await instance.render();
