@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-09-28T23:18:35.786Z",
+  "baseURL": "https://reuse-git-feat-watson-assistant-voice-lucasbuzatos-projects.vercel.app",
+  "commit": "cbe507db0df595c69c7a3a8d26f90228d600791e",
+  "runId": "36497179355",
+  "checks": {
+    "fixture": {
+      "ok": true,
+      "accountAItems": 2,
+      "accountBItems": 1
+    },
+    "guidance": {
+      "ok": true
+    }
+  },
+  "pageErrors": [],
+  "consoleErrors": [
+    {
+      "page": "chat-a",
+      "message": "Failed to load resource: the server responded with a status of 401 ()"
+    }
+  ],
+  "ok": false,
+  "failure": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('[data-testid=\"watson-assistant-voice\"]')\n    - locator resolved to <button type=\"button\" data-state=\"idle\" aria-pressed=\"false\" title=\"Falar com o Assistente ReUse\" data-testid=\"watson-assistant-voice\" aria-label=\"Falar com o Assistente ReUse\" class=\"fixed bottom-24 right-5 z-[9998] flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2F7D5A]/30 disabled:cursor-wait disabled:opacity-70 bg-[#2F7D5A] hover:bg-[#20563E]\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"WACInputContainer WACInputContainer--hasFocus\">…</div> from <div>…</div> subtree intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"WACInputContainer WACInputContainer--hasFocus\">…</div> from <div>…</div> subtree intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    58 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div class=\"WACInputContainer WACInputContainer--hasFocus\">…</div> from <div>…</div> subtree intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+}
