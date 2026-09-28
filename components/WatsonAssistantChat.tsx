@@ -348,7 +348,7 @@ export default function WatsonAssistantChat() {
       {status === "ready" && voiceSupported ? (
         <>
           {voiceStatus === "listening" ? (
-            <span className="fixed bottom-28 right-20 z-[9998] rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm">
+            <span className="fixed bottom-40 right-5 z-[100000] rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm md:bottom-20 md:right-[27rem]">
               Ouvindo…
             </span>
           ) : null}
@@ -361,7 +361,7 @@ export default function WatsonAssistantChat() {
             title={voiceLabel}
             data-testid="watson-assistant-voice"
             data-state={voiceStatus}
-            className={`fixed bottom-24 right-5 z-[9998] flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2F7D5A]/30 disabled:cursor-wait disabled:opacity-70 ${
+            className={`fixed bottom-24 right-5 z-[100000] flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2F7D5A]/30 disabled:cursor-wait disabled:opacity-70 md:bottom-6 md:right-[28rem] ${
               voiceStatus === "listening"
                 ? "bg-red-600 hover:bg-red-700"
                 : "bg-[#2F7D5A] hover:bg-[#20563E]"
