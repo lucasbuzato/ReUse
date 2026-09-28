@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type AssistantIdentity = {
   authenticated: true;
@@ -27,7 +27,9 @@ type WebChatInstance = {
     type: "pre:send";
     handler: (event: WebChatEvent) => void | Promise<void>;
   }): void;
+  openWindow?(): void | Promise<void>;
   render(): void | Promise<void>;
+  send(message: { input: { text: string } }): void | Promise<void>;
   updateHomeScreenConfig?(config: {
     is_on: boolean;
     greeting: string;
@@ -49,9 +51,41 @@ type WatsonAssistantChatOptions = {
   onLoad(instance: WebChatInstance): void | Promise<void>;
 };
 
+type SpeechRecognitionResultEventLike = Event & {
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+};
+
+type SpeechRecognitionErrorEventLike = Event & {
+  error: string;
+};
+
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionResultEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  onend: (() => void) | null;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
 declare global {
   interface Window {
     watsonAssistantChatOptions?: WatsonAssistantChatOptions;
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
   }
 }
 
@@ -119,6 +153,73 @@ export default function WatsonAssistantChat() {
   const [status, setStatus] = useState<
     "disabled" | "loading" | "ready" | "error"
   >(isConfigured ? "loading" : "disabled");
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<
+    "idle" | "listening" | "sending" | "error"
+  >("idle");
+  const webChatInstanceRef = useRef<WebChatInstance | null>(null);
+  const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
+
+  function toggleVoiceInput() {
+    if (voiceStatus === "listening") {
+      speechRecognitionRef.current?.stop();
+      return;
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    const instance = webChatInstanceRef.current;
+
+    if (!SpeechRecognition || !instance) {
+      setVoiceStatus("error");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "pt-BR";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => setVoiceStatus("listening");
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript.trim();
+
+      if (!transcript) {
+        setVoiceStatus("error");
+        return;
+      }
+
+      setVoiceStatus("sending");
+      void (async () => {
+        try {
+          await instance.openWindow?.();
+          await instance.send({ input: { text: transcript } });
+          setVoiceStatus("idle");
+        } catch (error) {
+          console.error("Não foi possível enviar a mensagem por voz.", error);
+          setVoiceStatus("error");
+        }
+      })();
+    };
+    recognition.onerror = (event) => {
+      if (event.error === "aborted") {
+        setVoiceStatus("idle");
+        return;
+      }
+
+      console.error("Não foi possível reconhecer a mensagem por voz.", event.error);
+      setVoiceStatus("error");
+    };
+    recognition.onend = () => {
+      speechRecognitionRef.current = null;
+      setVoiceStatus((current) =>
+        current === "listening" ? "idle" : current
+      );
+    };
+
+    speechRecognitionRef.current = recognition;
+    recognition.start();
+  }
 
   useEffect(() => {
     if (!isConfigured) return;
@@ -126,6 +227,10 @@ export default function WatsonAssistantChat() {
     let mounted = true;
     let identity: AssistantIdentity | null = null;
     let identityCheckedAt = 0;
+
+    setVoiceSupported(
+      Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition)
+    );
 
     async function getIdentity() {
       const expiresAt = identity ? Date.parse(identity.expiresAt) : 0;
@@ -189,6 +294,7 @@ export default function WatsonAssistantChat() {
         });
 
         await instance.render();
+        webChatInstanceRef.current = instance;
         if (mounted) setStatus("ready");
       },
     };
@@ -209,23 +315,88 @@ export default function WatsonAssistantChat() {
 
     return () => {
       mounted = false;
+      speechRecognitionRef.current?.abort();
+      speechRecognitionRef.current = null;
+      webChatInstanceRef.current = null;
     };
   }, []);
 
+  const voiceLabel =
+    voiceStatus === "listening"
+      ? "Parar entrada por voz"
+      : voiceStatus === "sending"
+        ? "Enviando mensagem por voz"
+        : "Falar com o Assistente ReUse";
+
   return (
-    <span
-      className="sr-only"
-      data-testid="watson-assistant-status"
-      data-status={status}
-      aria-live="polite"
-    >
-      {status === "disabled"
-        ? "Assistente não configurado neste ambiente."
-        : status === "error"
-          ? "Assistente temporariamente indisponível."
-          : status === "ready"
-            ? "Assistente disponível."
-            : "Carregando assistente."}
-    </span>
+    <>
+      <span
+        className="sr-only"
+        data-testid="watson-assistant-status"
+        data-status={status}
+        aria-live="polite"
+      >
+        {status === "disabled"
+          ? "Assistente não configurado neste ambiente."
+          : status === "error"
+            ? "Assistente temporariamente indisponível."
+            : status === "ready"
+              ? "Assistente disponível."
+              : "Carregando assistente."}
+      </span>
+
+      {status === "ready" && voiceSupported ? (
+        <>
+          {voiceStatus === "listening" ? (
+            <span className="fixed bottom-28 right-20 z-[9998] rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm">
+              Ouvindo…
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={toggleVoiceInput}
+            disabled={voiceStatus === "sending"}
+            aria-label={voiceLabel}
+            aria-pressed={voiceStatus === "listening"}
+            title={voiceLabel}
+            data-testid="watson-assistant-voice"
+            data-state={voiceStatus}
+            className={`fixed bottom-24 right-5 z-[9998] flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2F7D5A]/30 disabled:cursor-wait disabled:opacity-70 ${
+              voiceStatus === "listening"
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-[#2F7D5A] hover:bg-[#20563E]"
+            }`}
+          >
+            {voiceStatus === "listening" ? (
+              <span aria-hidden="true" className="h-4 w-4 rounded-sm bg-white" />
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="h-6 w-6"
+                fill="none"
+              >
+                <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" />
+                <path
+                  d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+          </button>
+          <span className="sr-only" aria-live="polite">
+            {voiceStatus === "listening"
+              ? "O assistente está ouvindo."
+              : voiceStatus === "sending"
+                ? "Enviando a mensagem reconhecida."
+                : voiceStatus === "error"
+                  ? "Não foi possível usar a entrada por voz. Tente novamente."
+                  : ""}
+          </span>
+        </>
+      ) : null}
+    </>
   );
 }
