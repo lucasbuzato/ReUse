@@ -1,22 +1,25 @@
 import { chromium } from "playwright";
 import { strict as assert } from "node:assert";
 import { randomBytes } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const baseURL = process.env.BASE_URL;
+const voiceURL = process.env.VOICE_URL;
 const evidenceDir = process.env.EVIDENCE_DIR ?? "docs/evidence/watson";
 const runId = process.env.GITHUB_RUN_ID ?? Date.now().toString();
 
-if (!baseURL) {
-  throw new Error("BASE_URL é obrigatória.");
+if (!baseURL || !voiceURL) {
+  throw new Error("BASE_URL e VOICE_URL são obrigatórias.");
 }
 
+await rm(evidenceDir, { recursive: true, force: true });
 await mkdir(evidenceDir, { recursive: true });
 
 const report = {
   generatedAt: new Date().toISOString(),
   baseURL,
+  voiceURL,
   commit: process.env.GITHUB_SHA ?? null,
   runId,
   checks: {},
@@ -25,6 +28,7 @@ const report = {
 };
 
 const normalizeBaseURL = baseURL.replace(/\/$/, "");
+const normalizeVoiceURL = voiceURL.replace(/\/$/, "");
 const suffix = `${runId}-${Date.now()}`;
 const password = `${randomBytes(18).toString("base64url")}Aa1!`;
 const accounts = {
@@ -51,11 +55,11 @@ function trackPage(page, label) {
   });
 }
 
-async function waitForDeployment(request) {
+async function waitForDeployment(request, targetURL) {
   let lastStatus = 0;
   for (let attempt = 0; attempt < 30; attempt += 1) {
     try {
-      const response = await request.get(normalizeBaseURL, {
+      const response = await request.get(targetURL, {
         timeout: 15_000,
       });
       lastStatus = response.status();
@@ -287,20 +291,25 @@ async function screenshot(page, name) {
 
 const browser = await chromium.launch({ headless: true });
 const bootstrapContext = await browser.newContext();
-await waitForDeployment(bootstrapContext.request);
+await Promise.all([
+  waitForDeployment(bootstrapContext.request, normalizeBaseURL),
+  waitForDeployment(bootstrapContext.request, normalizeVoiceURL),
+]);
 await bootstrapContext.close();
 
 const contextA = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "pt-BR" });
 const contextB = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "pt-BR" });
-await Promise.all([installBrowserHooks(contextA), installBrowserHooks(contextB)]);
+const contextVoice = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "pt-BR" });
+await Promise.all([
+  installBrowserHooks(contextA),
+  installBrowserHooks(contextB),
+  installBrowserHooks(contextVoice),
+]);
 
 const chatPage = await contextA.newPage();
 const profileA = await contextA.newPage();
 const profileB = await contextB.newPage();
-trackPage(chatPage, "chat-a");
-trackPage(profileA, "perfil-a");
-trackPage(profileB, "perfil-b");
-
+const voicePage = await contextVoice.newPage();
 try {
   const [itemsA, itemsB] = await Promise.all([
     registerAndCreateItems(chatPage, accounts.a, [
@@ -315,44 +324,52 @@ try {
   assert.ok(itemsB.every((item) => item.status === "DISPONIVEL"));
   report.checks.fixture = { ok: true, accountAItems: 2, accountBItems: 1 };
 
-  await chatPage.goto(normalizeBaseURL, { waitUntil: "domcontentloaded" });
-  await waitForChat(chatPage);
+  trackPage(chatPage, "chat-a-producao");
+  trackPage(profileA, "perfil-a-producao");
+  trackPage(profileB, "perfil-b-producao");
+  trackPage(voicePage, "voz-preview");
+
+  await voicePage.goto(normalizeVoiceURL, { waitUntil: "domcontentloaded" });
+  await waitForChat(voicePage);
 
   const guidanceFragment = "Selecione Publicar anúncio";
-  const initialGuidanceCount = await currentConversationCount(chatPage, guidanceFragment);
-  await sendChat(chatPage, "Como cadastrar um novo item?");
-  await waitForConversationTextCount(chatPage, guidanceFragment, initialGuidanceCount + 1);
-  await screenshot(chatPage, "01-orientacao-cadastrar-item.png");
+  const initialGuidanceCount = await currentConversationCount(voicePage, guidanceFragment);
+  await sendChat(voicePage, "Como cadastrar um novo item?");
+  await waitForConversationTextCount(voicePage, guidanceFragment, initialGuidanceCount + 1);
+  await screenshot(voicePage, "01-orientacao-cadastrar-item.png");
   report.checks.guidance = { ok: true };
 
-  const voiceButton = chatPage.locator('[data-testid="watson-assistant-voice"]');
+  const voiceButton = voicePage.locator('[data-testid="watson-assistant-voice"]');
   await voiceButton.waitFor({ state: "visible", timeout: 30_000 });
-  const voiceSendCountBefore = await chatPage.evaluate(
+  const voiceSendCountBefore = await voicePage.evaluate(
     () => window.__reuseVoiceSends.length
   );
   const voiceGuidanceCountBefore = await currentConversationCount(
-    chatPage,
+    voicePage,
     guidanceFragment
   );
   await voiceButton.click();
-  await chatPage.waitForSelector('[data-testid="watson-assistant-voice"][data-state="listening"]');
-  await screenshot(chatPage, "02-voz-ouvindo.png");
-  await chatPage.waitForFunction(
+  await voicePage.waitForSelector('[data-testid="watson-assistant-voice"][data-state="listening"]');
+  await screenshot(voicePage, "02-voz-ouvindo.png");
+  await voicePage.waitForFunction(
     (previousCount) => window.__reuseVoiceSends.length > previousCount,
     voiceSendCountBefore,
     { timeout: 15_000 }
   );
   await waitForConversationTextCount(
-    chatPage,
+    voicePage,
     guidanceFragment,
     voiceGuidanceCountBefore + 1
   );
-  await screenshot(chatPage, "03-voz-transcricao-enviada.png");
-  const recognitionLocale = await chatPage.evaluate(
+  await screenshot(voicePage, "03-voz-transcricao-enviada.png");
+  const recognitionLocale = await voicePage.evaluate(
     () => window.__reuseRecognitionLocale
   );
   assert.equal(recognitionLocale, "pt-BR");
-  report.checks.voice = { ok: true, locale: recognitionLocale };
+  report.checks.voice = { ok: true, locale: recognitionLocale, environment: "preview" };
+
+  await chatPage.goto(normalizeBaseURL, { waitUntil: "domcontentloaded" });
+  await waitForChat(chatPage);
 
   const pausePrompt = "Quer pausar todos agora?";
   const firstPausePromptCount = await currentConversationCount(chatPage, pausePrompt);
@@ -414,6 +431,7 @@ try {
   report.failure = error instanceof Error ? error.message : String(error);
   await Promise.allSettled([
     screenshot(chatPage, "failure-chat.png"),
+    screenshot(voicePage, "failure-voice.png"),
     screenshot(profileA, "failure-perfil-a.png"),
     screenshot(profileB, "failure-perfil-b.png"),
   ]);

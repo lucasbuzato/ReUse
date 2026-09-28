@@ -25,7 +25,8 @@ jobs:
     timeout-minutes: 20
 
     env:
-      BASE_URL: https://reuse-git-feat-watson-assistant-voice-lucasbuzatos-projects.vercel.app
+      BASE_URL: https://reuse-lucasbuzatos-projects.vercel.app
+      VOICE_URL: https://reuse-git-feat-watson-assistant-voice-lucasbuzatos-projects.vercel.app
       EVIDENCE_DIR: docs/evidence/watson
 
     steps:
@@ -48,10 +49,8 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Executar testes reais no Preview
-        run: |
-          rm -rf "$EVIDENCE_DIR"
-          node scripts/watson-e2e.mjs
+      - name: Executar testes reais publicados
+        run: node scripts/watson-e2e.mjs
 
       - name: Versionar evidências sem credenciais
         if: always()
