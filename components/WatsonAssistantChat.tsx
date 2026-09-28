@@ -153,7 +153,11 @@ export default function WatsonAssistantChat() {
   const [status, setStatus] = useState<
     "disabled" | "loading" | "ready" | "error"
   >(isConfigured ? "loading" : "disabled");
-  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [voiceSupported] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition)
+  );
   const [voiceStatus, setVoiceStatus] = useState<
     "idle" | "listening" | "sending" | "error"
   >("idle");
@@ -227,10 +231,6 @@ export default function WatsonAssistantChat() {
     let mounted = true;
     let identity: AssistantIdentity | null = null;
     let identityCheckedAt = 0;
-
-    setVoiceSupported(
-      Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition)
-    );
 
     async function getIdentity() {
       const expiresAt = identity ? Date.parse(identity.expiresAt) : 0;
