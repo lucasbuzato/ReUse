@@ -36,7 +36,8 @@ export function assistantActionErrorResponse(error: unknown) {
     return assistantJson(
       {
         ok: false,
-        error: "unauthorized",
+        // Código diagnóstico temporário, sem credenciais ou valores recebidos.
+        error: error.code,
         message: "Sua sessão expirou. Entre novamente no ReUse e reabra o chat.",
       },
       { status: 401 }
