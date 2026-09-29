@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-29T01:11:10.452Z",
+  "generatedAt": "2026-09-29T01:29:41.144Z",
   "baseURL": "https://reuse-lucasbuzatos-projects.vercel.app",
   "voiceURL": "https://reuse-git-feat-watson-assistant-voice-lucasbuzatos-projects.vercel.app",
-  "commit": "1be3e346804a49e42198455302834e8fae5f12a7",
-  "runId": "36506600863",
+  "commit": "02b185ac0c699129c8ebd7d6ca882e16f094fc97",
+  "runId": "36508072315",
   "checks": {
     "fixture": {
       "ok": true,
@@ -27,5 +27,5 @@
     }
   ],
   "ok": false,
-  "failure": "Texto não encontrado no chat: Quer pausar todos agora?. Último conteúdo: eles precisem. Inscreva-se hoje. Fechar o painel de informações. Fechar a janela de bate-papo Voltar para a tela inicial Assistente ReUse Fechar a janela de bate-papo Você 01:11 Você disse Quero pausar meus anúncios disponíveis 01:11 Assistente ReUse disse Não consegui consultar seus anúncios agora. Entre novamente na sua conta e tente de novo; nunca envie sua senha pelo chat. Digite alguma coisa... Clique para enviar a mensagem Desenvolvido com IBM watsonx . A página da web não está disponível."
+  "failure": "Texto não encontrado no chat: Quer pausar todos agora?. Último conteúdo: eles precisem. Inscreva-se hoje. Fechar o painel de informações. Fechar a janela de bate-papo Voltar para a tela inicial Assistente ReUse Fechar a janela de bate-papo Você 01:29 Você disse Quero pausar meus anúncios disponíveis 01:29 Assistente ReUse disse Não consegui consultar seus anúncios agora. Entre novamente na sua conta e tente de novo; nunca envie sua senha pelo chat. Digite alguma coisa... Clique para enviar a mensagem Desenvolvido com IBM watsonx . A página da web não está disponível."
 }
