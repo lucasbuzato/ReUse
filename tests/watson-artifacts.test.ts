@@ -53,12 +53,17 @@ test("catálogo cobre automação e orientação em português", () => {
   );
 });
 
-test("Web Chat usa a chave oficial do contexto de Actions da IBM", () => {
+test("Web Chat injeta a identidade antes de enviar mensagens à IBM", () => {
   const source = readFileSync(
     path.join(process.cwd(), "components/WatsonAssistantChat.tsx"),
     "utf8"
   );
 
-  assert.match(source, /const ACTION_SKILL = "action skill";/);
-  assert.equal(source.includes('"actions skill"'), false);
+  assert.match(
+    source,
+    /const ACTION_SKILLS = \["actions skill", "action skill"\] as const;/
+  );
+  assert.match(source, /handler\(event\) \{/);
+  assert.match(source, /setActionSkillVariables\(event, identity\);/);
+  assert.doesNotMatch(source, /async handler\(event\)/);
 });

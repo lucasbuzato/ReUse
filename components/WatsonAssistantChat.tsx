@@ -90,7 +90,7 @@ declare global {
 }
 
 const SCRIPT_ID = "reuse-watson-assistant-web-chat";
-const ACTION_SKILL = "action skill";
+const ACTION_SKILLS = ["actions skill", "action skill"] as const;
 
 const integrationID =
   process.env.NEXT_PUBLIC_IBM_ASSISTANT_INTEGRATION_ID ?? "";
@@ -126,27 +126,27 @@ function setActionSkillVariables(
 ) {
   event.data.context ??= {};
   event.data.context.skills ??= {};
-  event.data.context.skills[ACTION_SKILL] ??= {};
-  event.data.context.skills[ACTION_SKILL].skill_variables ??= {};
 
-  const variables =
-    event.data.context.skills[ACTION_SKILL].skill_variables as Record<
-      string,
-      unknown
-    >;
+  for (const actionSkill of ACTION_SKILLS) {
+    event.data.context.skills[actionSkill] ??= {};
+    event.data.context.skills[actionSkill].skill_variables ??= {};
 
-  variables.reuse_authenticated = Boolean(identity);
+    const variables = event.data.context.skills[actionSkill]
+      .skill_variables as Record<string, unknown>;
 
-  if (identity) {
-    variables.reuse_action_token = identity.actionToken;
-    variables.reuse_token_expires_at = identity.expiresAt;
-    variables.reuse_user_name = identity.displayName;
-    return;
+    variables.reuse_authenticated = Boolean(identity);
+
+    if (identity) {
+      variables.reuse_action_token = identity.actionToken;
+      variables.reuse_token_expires_at = identity.expiresAt;
+      variables.reuse_user_name = identity.displayName;
+      continue;
+    }
+
+    delete variables.reuse_action_token;
+    delete variables.reuse_token_expires_at;
+    delete variables.reuse_user_name;
   }
-
-  delete variables.reuse_action_token;
-  delete variables.reuse_token_expires_at;
-  delete variables.reuse_user_name;
 }
 
 export default function WatsonAssistantChat() {
@@ -282,8 +282,9 @@ export default function WatsonAssistantChat() {
 
         instance.on({
           type: "pre:send",
-          async handler(event) {
-            setActionSkillVariables(event, await getIdentity());
+          handler(event) {
+            setActionSkillVariables(event, identity);
+            void getIdentity();
           },
         });
 
