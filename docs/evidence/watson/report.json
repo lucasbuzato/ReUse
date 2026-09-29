@@ -1,8 +1,9 @@
 {
-  "generatedAt": "2026-09-28T23:50:19.587Z",
-  "baseURL": "https://reuse-git-feat-watson-assistant-voice-lucasbuzatos-projects.vercel.app",
-  "commit": "5085ea2f3b05605fb1d321fbe4eded6c20365348",
-  "runId": "36499967364",
+  "generatedAt": "2026-09-28T23:59:52.623Z",
+  "baseURL": "https://reuse-lucasbuzatos-projects.vercel.app",
+  "voiceURL": "https://reuse-git-feat-watson-assistant-voice-lucasbuzatos-projects.vercel.app",
+  "commit": "43cee0aa2ac4397e708911ce67be001570f80fed",
+  "runId": "36500764003",
   "checks": {
     "fixture": {
       "ok": true,
@@ -14,28 +15,17 @@
     },
     "voice": {
       "ok": true,
-      "locale": "pt-BR"
+      "locale": "pt-BR",
+      "environment": "preview"
     }
   },
   "pageErrors": [],
   "consoleErrors": [
     {
-      "page": "chat-a",
+      "page": "voz-preview",
       "message": "Failed to load resource: the server responded with a status of 401 ()"
-    },
-    {
-      "page": "perfil-b",
-      "message": "[Chat] Failed to track events TypeError: Failed to fetch\n    at yt.fetch (https://web-chat.global.assistant.watson.appdomain.cloud/versions/latest/WatsonAssistantChatEntry.js:1:19993)\n    at https://web-chat.global.assistant.watson.appdomain.cloud/versions/8.12.6/chat~cds-ai-chat-bootstrap.js:2:226033"
-    },
-    {
-      "page": "chat-a",
-      "message": "[Chat] Failed to track events TypeError: Failed to fetch\n    at yt.fetch (https://web-chat.global.assistant.watson.appdomain.cloud/versions/latest/WatsonAssistantChatEntry.js:1:19993)\n    at https://web-chat.global.assistant.watson.appdomain.cloud/versions/8.12.6/chat~cds-ai-chat-bootstrap.js:2:226033"
-    },
-    {
-      "page": "chat-a",
-      "message": "[Chat] Failed to track events TypeError: Failed to fetch\n    at yt.fetch (https://web-chat.global.assistant.watson.appdomain.cloud/versions/latest/WatsonAssistantChatEntry.js:1:19993)\n    at https://web-chat.global.assistant.watson.appdomain.cloud/versions/8.12.6/chat~cds-ai-chat-bootstrap.js:2:226033"
     }
   ],
   "ok": false,
-  "failure": "Texto não encontrado no chat: Quer pausar todos agora?. Último conteúdo: lecione Anunciar no menu ou Novo anúncio no perfil. 3. Informe título, descrição, conservação e categoria. 4. Se quiser, adicione a URL de uma imagem. 5. Selecione Publicar anúncio. O item aparecerá no catálogo como Disponível. 23:50 Assistente ReUse disse Não consegui consultar seus anúncios agora. Entre novamente na sua conta e tente de novo; nunca envie sua senha pelo chat. Digite alguma coisa... Clique para enviar a mensagem Desenvolvido com IBM watsonx . A página da web não está disponível."
+  "failure": "Texto não encontrado no chat: Quer pausar todos agora?. Último conteúdo: eles precisem. Inscreva-se hoje. Fechar o painel de informações. Fechar a janela de bate-papo Voltar para a tela inicial Assistente ReUse Fechar a janela de bate-papo Você 00:00 Você disse Quero pausar meus anúncios disponíveis 00:00 Assistente ReUse disse Não consegui consultar seus anúncios agora. Entre novamente na sua conta e tente de novo; nunca envie sua senha pelo chat. Digite alguma coisa... Clique para enviar a mensagem Desenvolvido com IBM watsonx . A página da web não está disponível."
 }
