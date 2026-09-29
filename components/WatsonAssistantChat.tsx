@@ -90,7 +90,7 @@ declare global {
 }
 
 const SCRIPT_ID = "reuse-watson-assistant-web-chat";
-const ACTION_SKILL = "actions skill";
+const ACTION_SKILL = "action skill";
 
 const integrationID =
   process.env.NEXT_PUBLIC_IBM_ASSISTANT_INTEGRATION_ID ?? "";

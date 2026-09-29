@@ -52,3 +52,13 @@ test("catálogo cobre automação e orientação em português", () => {
     true
   );
 });
+
+test("Web Chat usa a chave oficial do contexto de Actions da IBM", () => {
+  const source = readFileSync(
+    path.join(process.cwd(), "components/WatsonAssistantChat.tsx"),
+    "utf8"
+  );
+
+  assert.match(source, /const ACTION_SKILL = "action skill";/);
+  assert.equal(source.includes('"actions skill"'), false);
+});
