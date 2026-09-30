@@ -193,7 +193,7 @@ export default function WatsonAssistantChat() {
   const webChatInstanceRef = useRef<WebChatInstance | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  async function toggleVoiceInput() {
+  function toggleVoiceInput() {
     if (voiceStatus === "listening") {
       speechRecognitionRef.current?.stop();
       return;
@@ -209,38 +209,30 @@ export default function WatsonAssistantChat() {
       return;
     }
 
-    setVoiceStatus("requesting");
-    setVoiceFeedback("Solicitando acesso ao microfone…");
-
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("media_devices_unavailable");
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
-    } catch (error) {
-      console.error("Não foi possível acessar o microfone.", error);
-      setVoiceFeedback(
-        "Não consegui acessar o microfone. Verifique a permissão do site e o microfone do sistema."
-      );
-      setVoiceStatus("error");
-      return;
-    }
-
     const recognition = new SpeechRecognition();
     let receivedResult = false;
     let recognitionFailed = false;
+    let timedOut = false;
+    let startTimeout: number | null = null;
+
+    const clearStartTimeout = () => {
+      if (startTimeout !== null) {
+        window.clearTimeout(startTimeout);
+        startTimeout = null;
+      }
+    };
 
     recognition.lang = "pt-BR";
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognition.onstart = () => {
+      clearStartTimeout();
       setVoiceFeedback("Ouvindo… fale agora.");
       setVoiceStatus("listening");
     };
     recognition.onresult = (event) => {
+      clearStartTimeout();
       receivedResult = true;
       const transcript = event.results[0]?.[0]?.transcript.trim();
 
@@ -266,11 +258,14 @@ export default function WatsonAssistantChat() {
       })();
     };
     recognition.onerror = (event) => {
+      clearStartTimeout();
       recognitionFailed = true;
 
       if (event.error === "aborted") {
-        setVoiceFeedback("");
-        setVoiceStatus("idle");
+        if (!timedOut) {
+          setVoiceFeedback("");
+          setVoiceStatus("idle");
+        }
         return;
       }
 
@@ -279,7 +274,10 @@ export default function WatsonAssistantChat() {
       setVoiceStatus("error");
     };
     recognition.onend = () => {
+      clearStartTimeout();
       speechRecognitionRef.current = null;
+
+      if (timedOut) return;
 
       if (!receivedResult && !recognitionFailed) {
         setVoiceFeedback("Não detectei sua fala. Clique no microfone e tente novamente.");
@@ -289,10 +287,24 @@ export default function WatsonAssistantChat() {
 
     speechRecognitionRef.current = recognition;
     setVoiceFeedback("Iniciando reconhecimento de voz…");
+    setVoiceStatus("requesting");
 
     try {
+      startTimeout = window.setTimeout(() => {
+        if (receivedResult || recognitionFailed) return;
+
+        timedOut = true;
+        recognitionFailed = true;
+        speechRecognitionRef.current = null;
+        setVoiceFeedback(
+          "O Chrome não iniciou o reconhecimento de voz. Recarregue a página e tente novamente."
+        );
+        setVoiceStatus("error");
+        recognition.abort();
+      }, 8_000);
       recognition.start();
     } catch (error) {
+      clearStartTimeout();
       speechRecognitionRef.current = null;
       console.error("Não foi possível iniciar o reconhecimento de voz.", error);
       setVoiceFeedback("Não foi possível iniciar o microfone. Recarregue a página e tente novamente.");

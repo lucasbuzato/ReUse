@@ -115,14 +115,16 @@ test("mudanças de autenticação preservam o usuário IBM e renovam a página",
   );
 });
 
-test("entrada por voz solicita o microfone e mostra erros ao usuário", () => {
+test("entrada por voz inicia no gesto do usuário e possui timeout visível", () => {
   const source = readFileSync(
     path.join(process.cwd(), "components/WatsonAssistantChat.tsx"),
     "utf8"
   );
 
-  assert.match(source, /navigator\.mediaDevices\.getUserMedia\(\{ audio: true \}\)/);
-  assert.match(source, /Solicitando acesso ao microfone/);
+  assert.match(source, /function toggleVoiceInput\(\) \{/);
+  assert.match(source, /recognition\.start\(\);/);
+  assert.match(source, /startTimeout = window\.setTimeout/);
+  assert.match(source, /O Chrome não iniciou o reconhecimento de voz/);
   assert.match(source, /getVoiceErrorMessage\(event\.error\)/);
-  assert.match(source, /role=\{voiceStatus === "error" \? "alert" : "status"\}/);
+  assert.doesNotMatch(source, /navigator\.mediaDevices\.getUserMedia/);
 });
