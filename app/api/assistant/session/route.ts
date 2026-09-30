@@ -3,7 +3,6 @@ import { NextRequest } from "next/server";
 import { assistantJson } from "@/lib/assistant-api";
 import {
   createAssistantActionToken,
-  createAssistantUserId,
   resolveAssistantActionSecret,
 } from "@/lib/assistant-action-token";
 import {
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
     const userPayload: AssistantWebChatUserPayload = {
       reuse_authenticated: Boolean(user),
     };
-    let subject = anonymous.subject;
+    const subject = anonymous.subject;
     let displayName: string | undefined;
 
     if (user) {
@@ -75,7 +74,6 @@ export async function POST(request: NextRequest) {
         secret,
       });
 
-      subject = createAssistantUserId(user.id, secret);
       displayName = user.name.split(" ")[0];
       userPayload.reuse_action_token = actionToken.token;
       userPayload.reuse_token_expires_at = actionToken.expiresAt;
@@ -95,7 +93,7 @@ export async function POST(request: NextRequest) {
       ...(displayName ? { displayName } : {}),
     });
 
-    if (!user && anonymous.shouldSetCookie) {
+    if (anonymous.shouldSetCookie) {
       response.cookies.set(ASSISTANT_VISITOR_COOKIE, anonymous.subject, {
         httpOnly: true,
         sameSite: "lax",

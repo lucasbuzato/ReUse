@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function LogoutButton() {
-  const router = useRouter();
   const [carregando, setCarregando] = useState(false);
 
   async function sair() {
@@ -12,8 +10,7 @@ export default function LogoutButton() {
 
     try {
       await fetch("/api/users/logout", { method: "POST" });
-      router.push("/");
-      router.refresh();
+      window.location.assign("/");
     } finally {
       setCarregando(false);
     }

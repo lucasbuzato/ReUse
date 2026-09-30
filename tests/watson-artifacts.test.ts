@@ -92,3 +92,25 @@ test("Web Chat usa JWT assinado e mantém token sensível fora do contexto públ
   assert.doesNotMatch(source, /variables\.reuse_action_token\s*=/);
   assert.doesNotMatch(source, /updateUserID/);
 });
+
+test("mudanças de autenticação preservam o usuário IBM e renovam a página", () => {
+  const sessionSource = readFileSync(
+    path.join(process.cwd(), "app/api/assistant/session/route.ts"),
+    "utf8"
+  );
+  const authComponents = [
+    "components/FormularioLogin.tsx",
+    "components/FormularioCadastro.tsx",
+    "components/LogoutButton.tsx",
+  ].map((relativePath) =>
+    readFileSync(path.join(process.cwd(), relativePath), "utf8")
+  );
+
+  assert.match(sessionSource, /const subject = anonymous\.subject;/);
+  assert.match(sessionSource, /if \(anonymous\.shouldSetCookie\)/);
+  assert.doesNotMatch(sessionSource, /createAssistantUserId/);
+  assert.equal(
+    authComponents.every((source) => /window\.location\.assign\(/.test(source)),
+    true
+  );
+});
