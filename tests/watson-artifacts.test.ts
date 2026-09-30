@@ -114,3 +114,15 @@ test("mudanças de autenticação preservam o usuário IBM e renovam a página",
     true
   );
 });
+
+test("entrada por voz solicita o microfone e mostra erros ao usuário", () => {
+  const source = readFileSync(
+    path.join(process.cwd(), "components/WatsonAssistantChat.tsx"),
+    "utf8"
+  );
+
+  assert.match(source, /navigator\.mediaDevices\.getUserMedia\(\{ audio: true \}\)/);
+  assert.match(source, /Solicitando acesso ao microfone/);
+  assert.match(source, /getVoiceErrorMessage\(event\.error\)/);
+  assert.match(source, /role=\{voiceStatus === "error" \? "alert" : "status"\}/);
+});

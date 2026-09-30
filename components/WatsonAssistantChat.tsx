@@ -157,6 +157,26 @@ function setPublicActionSkillVariables(
   }
 }
 
+function getVoiceErrorMessage(error: string) {
+  if (error === "not-allowed" || error === "service-not-allowed") {
+    return "Permita o acesso ao microfone nas configurações do navegador e tente novamente.";
+  }
+
+  if (error === "audio-capture") {
+    return "Nenhum microfone disponível foi encontrado.";
+  }
+
+  if (error === "no-speech") {
+    return "Não detectei sua fala. Clique no microfone e tente novamente.";
+  }
+
+  if (error === "network") {
+    return "O serviço de reconhecimento de voz está indisponível. Tente novamente.";
+  }
+
+  return "Não foi possível iniciar a entrada por voz. Tente novamente.";
+}
+
 export default function WatsonAssistantChat() {
   const [status, setStatus] = useState<
     "disabled" | "loading" | "ready" | "error"
@@ -167,12 +187,13 @@ export default function WatsonAssistantChat() {
       Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition)
   );
   const [voiceStatus, setVoiceStatus] = useState<
-    "idle" | "listening" | "sending" | "error"
+    "idle" | "requesting" | "listening" | "sending" | "error"
   >("idle");
+  const [voiceFeedback, setVoiceFeedback] = useState("");
   const webChatInstanceRef = useRef<WebChatInstance | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  function toggleVoiceInput() {
+  async function toggleVoiceInput() {
     if (voiceStatus === "listening") {
       speechRecognitionRef.current?.stop();
       return;
@@ -183,54 +204,100 @@ export default function WatsonAssistantChat() {
     const instance = webChatInstanceRef.current;
 
     if (!SpeechRecognition || !instance) {
+      setVoiceFeedback("A entrada por voz não está disponível neste navegador.");
+      setVoiceStatus("error");
+      return;
+    }
+
+    setVoiceStatus("requesting");
+    setVoiceFeedback("Solicitando acesso ao microfone…");
+
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("media_devices_unavailable");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+    } catch (error) {
+      console.error("Não foi possível acessar o microfone.", error);
+      setVoiceFeedback(
+        "Não consegui acessar o microfone. Verifique a permissão do site e o microfone do sistema."
+      );
       setVoiceStatus("error");
       return;
     }
 
     const recognition = new SpeechRecognition();
+    let receivedResult = false;
+    let recognitionFailed = false;
+
     recognition.lang = "pt-BR";
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onstart = () => setVoiceStatus("listening");
+    recognition.onstart = () => {
+      setVoiceFeedback("Ouvindo… fale agora.");
+      setVoiceStatus("listening");
+    };
     recognition.onresult = (event) => {
+      receivedResult = true;
       const transcript = event.results[0]?.[0]?.transcript.trim();
 
       if (!transcript) {
+        setVoiceFeedback("Não detectei sua fala. Clique no microfone e tente novamente.");
         setVoiceStatus("error");
         return;
       }
 
+      setVoiceFeedback("Enviando a mensagem reconhecida…");
       setVoiceStatus("sending");
       void (async () => {
         try {
           await instance.openWindow?.();
           await instance.send({ input: { text: transcript } });
+          setVoiceFeedback("");
           setVoiceStatus("idle");
         } catch (error) {
           console.error("Não foi possível enviar a mensagem por voz.", error);
+          setVoiceFeedback("Reconheci sua fala, mas não consegui enviar a mensagem.");
           setVoiceStatus("error");
         }
       })();
     };
     recognition.onerror = (event) => {
+      recognitionFailed = true;
+
       if (event.error === "aborted") {
+        setVoiceFeedback("");
         setVoiceStatus("idle");
         return;
       }
 
       console.error("Não foi possível reconhecer a mensagem por voz.", event.error);
+      setVoiceFeedback(getVoiceErrorMessage(event.error));
       setVoiceStatus("error");
     };
     recognition.onend = () => {
       speechRecognitionRef.current = null;
-      setVoiceStatus((current) =>
-        current === "listening" ? "idle" : current
-      );
+
+      if (!receivedResult && !recognitionFailed) {
+        setVoiceFeedback("Não detectei sua fala. Clique no microfone e tente novamente.");
+        setVoiceStatus("error");
+      }
     };
 
     speechRecognitionRef.current = recognition;
-    recognition.start();
+    setVoiceFeedback("Iniciando reconhecimento de voz…");
+
+    try {
+      recognition.start();
+    } catch (error) {
+      speechRecognitionRef.current = null;
+      console.error("Não foi possível iniciar o reconhecimento de voz.", error);
+      setVoiceFeedback("Não foi possível iniciar o microfone. Recarregue a página e tente novamente.");
+      setVoiceStatus("error");
+    }
   }
 
   useEffect(() => {
@@ -333,9 +400,11 @@ export default function WatsonAssistantChat() {
   const voiceLabel =
     voiceStatus === "listening"
       ? "Parar entrada por voz"
-      : voiceStatus === "sending"
-        ? "Enviando mensagem por voz"
-        : "Falar com o Assistente ReUse";
+      : voiceStatus === "requesting"
+        ? "Solicitando acesso ao microfone"
+        : voiceStatus === "sending"
+          ? "Enviando mensagem por voz"
+          : "Falar com o Assistente ReUse";
 
   return (
     <>
@@ -356,15 +425,23 @@ export default function WatsonAssistantChat() {
 
       {status === "ready" && voiceSupported ? (
         <>
-          {voiceStatus === "listening" ? (
-            <span className="fixed bottom-40 right-5 z-[100000] rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm md:bottom-20 md:right-[27rem]">
-              Ouvindo…
+          {voiceFeedback ? (
+            <span
+              className={`fixed bottom-40 right-5 z-[100000] max-w-xs rounded-md border bg-white px-3 py-2 text-sm font-medium shadow-sm md:bottom-20 md:right-[27rem] ${
+                voiceStatus === "error"
+                  ? "border-red-200 text-red-700"
+                  : "border-slate-200 text-slate-800"
+              }`}
+              role={voiceStatus === "error" ? "alert" : "status"}
+              aria-live={voiceStatus === "error" ? "assertive" : "polite"}
+            >
+              {voiceFeedback}
             </span>
           ) : null}
           <button
             type="button"
             onClick={toggleVoiceInput}
-            disabled={voiceStatus === "sending"}
+            disabled={voiceStatus === "requesting" || voiceStatus === "sending"}
             aria-label={voiceLabel}
             aria-pressed={voiceStatus === "listening"}
             title={voiceLabel}
@@ -396,13 +473,7 @@ export default function WatsonAssistantChat() {
             )}
           </button>
           <span className="sr-only" aria-live="polite">
-            {voiceStatus === "listening"
-              ? "O assistente está ouvindo."
-              : voiceStatus === "sending"
-                ? "Enviando a mensagem reconhecida."
-                : voiceStatus === "error"
-                  ? "Não foi possível usar a entrada por voz. Tente novamente."
-                  : ""}
+            {voiceFeedback}
           </span>
         </>
       ) : null}
