@@ -51,9 +51,32 @@ test("catálogo cobre automação e orientação em português", () => {
     actions.every((action) => action.examples.length >= 4),
     true
   );
+
+  const extensionInputs = actions
+    .flatMap(
+      (action) =>
+        (
+          action as unknown as {
+            steps?: Array<{
+              type: string;
+              inputs?: Record<string, string>;
+            }>;
+          }
+        ).steps ?? []
+    )
+    .filter((step) => step.type === "extension")
+    .map((step) => step.inputs?.["X-ReUse-Action-Token"]);
+
+  assert.equal(extensionInputs.length, 4);
+  assert.equal(
+    extensionInputs.every(
+      (value) => value === "${system_integrations.chat.private.user_payload}.reuse_action_token"
+    ),
+    true
+  );
 });
 
-test("Web Chat injeta a identidade antes de enviar mensagens à IBM", () => {
+test("Web Chat usa JWT assinado e mantém token sensível fora do contexto público", () => {
   const source = readFileSync(
     path.join(process.cwd(), "components/WatsonAssistantChat.tsx"),
     "utf8"
@@ -63,7 +86,9 @@ test("Web Chat injeta a identidade antes de enviar mensagens à IBM", () => {
     source,
     /const ACTION_SKILLS = \["actions skill", "action skill"\] as const;/
   );
-  assert.match(source, /handler\(event\) \{/);
-  assert.match(source, /setActionSkillVariables\(event, identity\);/);
-  assert.doesNotMatch(source, /async handler\(event\)/);
+  assert.match(source, /identityToken: initialIdentity\.identityToken/);
+  assert.match(source, /type: "identityTokenExpired"/);
+  assert.match(source, /setPublicActionSkillVariables\(event, identity\);/);
+  assert.doesNotMatch(source, /variables\.reuse_action_token\s*=/);
+  assert.doesNotMatch(source, /updateUserID/);
 });

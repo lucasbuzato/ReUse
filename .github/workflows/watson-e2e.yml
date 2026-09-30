@@ -1,13 +1,8 @@
 name: Evidências Watson E2E
 
+# Executado manualmente somente depois que Preview/Live e a produção estiverem
+# alinhados. O fluxo cria fixtures reais e não deve rodar a cada push.
 on:
-  push:
-    branches:
-      - feat/watson-assistant-voice
-    paths:
-      - components/WatsonAssistantChat.tsx
-      - scripts/watson-e2e.mjs
-      - .github/workflows/watson-e2e.yml
   workflow_dispatch:
 
 permissions:

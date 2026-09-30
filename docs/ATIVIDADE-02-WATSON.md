@@ -15,7 +15,7 @@ A solução acrescenta ao ReUse um assistente virtual baseado em fluxos conversa
 A integração usa:
 
 - **Actions** para reconhecer frases e conduzir cada conversa;
-- **variáveis de sessão** para transportar o estado autenticado;
+- **contexto público e `user_payload` privado** para transportar o estado autenticado sem registrar o token;
 - **Web Chat** incorporado ao layout React/Next.js;
 - **extensão customizada OpenAPI 3.0** para chamar APIs reais do ReUse;
 - **tokens assinados de curta duração** para impedir que o chat escolha arbitrariamente outro usuário;
@@ -73,16 +73,13 @@ O fluxo pede confirmação e altera somente itens `PAUSADO` da conta conectada p
 O navegador nunca envia um `userId` confiável para a API de automação.
 
 1. A sessão HTTP-only existente identifica a conta no servidor.
-2. `POST /api/assistant/session` gera um token HMAC com:
-   - identificador interno do usuário (`sub`);
-   - audiência exclusiva do Assistant;
-   - escopos permitidos;
-   - emissão e expiração;
-   - identificador aleatório da emissão.
-3. O token vale no máximo 10 minutos.
-4. A extensão envia também uma API key estática, armazenada na IBM e na Vercel.
-5. A API valida as duas credenciais em tempo constante.
-6. Toda consulta e atualização do Prisma contém `ownerId` derivado do token.
+2. `POST /api/assistant/session` gera um token HMAC com identificador interno, audiência, escopos, emissão, expiração e identificador aleatório.
+3. O servidor criptografa o token com a chave pública fornecida pela IBM e inclui o resultado no `user_payload` de um JWT RS256 de até 10 minutos, assinado com uma chave RSA privada que permanece somente na Vercel.
+4. O Web Chat envia o JWT; a IBM valida a assinatura, descriptografa o `user_payload` e o mantém como contexto privado, fora dos logs da conversa.
+5. Cada callout lê `reuse_action_token` diretamente do contexto privado e o fornece ao cabeçalho da extensão.
+6. A extensão envia também uma API key estática, armazenada na IBM e na Vercel.
+7. A API valida chave, assinatura, expiração e escopo em tempo constante.
+8. Toda consulta e atualização do Prisma contém `ownerId` derivado do token.
 
 Assim, alterar o texto da conversa, o contexto do navegador ou um ID no request não permite modificar anúncios de outra conta.
 
@@ -151,12 +148,14 @@ Pessoa autenticada no ReUse
         │ cookie HTTP-only
         ▼
 POST /api/assistant/session
-        │ token HMAC de 10 min + ID pseudônimo
+        │ JWT RS256 de 10 min
+        │ user_payload criptografado: token HMAC + estado autenticado
         ▼
-IBM Web Chat ── pre:send ──► variáveis da Actions skill
+IBM Web Chat ── identityToken ──► validação pela chave pública
         │
         ▼
 watsonx Assistant Action
+        │ expressão do callout lê o user_payload privado
         │ confirmação + chamada da extensão
         ▼
 Extensão OpenAPI
@@ -179,6 +178,7 @@ Prisma/PostgreSQL
 | Guia de configuração IBM | `docs/IBM-WATSON-SETUP.md` |
 | Loader React do Web Chat | `components/WatsonAssistantChat.tsx` |
 | Token e escopos | `lib/assistant-action-token.ts` |
+| JWT RS256 do Web Chat | `lib/assistant-web-chat-token.ts` |
 | Autenticação das requests | `lib/assistant-request-auth.ts` |
 | Regras de automação | `lib/assistant-item-actions.ts` |
 | Adaptador seguro do Prisma | `lib/prisma-assistant-item-store.ts` |
@@ -189,7 +189,8 @@ Prisma/PostgreSQL
 
 A suíte cobre:
 
-- token válido;
+- token HMAC válido;
+- JWT RS256 válido, payload privado e chave RSA mínima;
 - assinatura adulterada;
 - segredo incorreto;
 - expiração;

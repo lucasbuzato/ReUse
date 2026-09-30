@@ -3,11 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 type AssistantIdentity = {
-  authenticated: true;
-  actionToken: string;
+  identityToken: string;
   expiresAt: string;
-  assistantUserId: string;
-  displayName: string;
+  authenticated: boolean;
+  displayName?: string;
 };
 
 type SkillContext = {
@@ -22,10 +21,18 @@ type WebChatEvent = {
   };
 };
 
+type IdentityTokenExpiredEvent = {
+  identityToken?: string;
+};
+
 type WebChatInstance = {
   on(options: {
     type: "pre:send";
     handler: (event: WebChatEvent) => void | Promise<void>;
+  }): void;
+  on(options: {
+    type: "identityTokenExpired";
+    handler: (event: IdentityTokenExpiredEvent) => void | Promise<void>;
   }): void;
   openWindow?(): void | Promise<void>;
   render(): void | Promise<void>;
@@ -39,7 +46,6 @@ type WebChatInstance = {
     };
   }): void | Promise<void>;
   updateLocale?(locale: string, savePreference?: boolean): void | Promise<void>;
-  updateUserID(userId: string): void;
   updateCSSVariables?(variables: Record<string, string>): void;
 };
 
@@ -48,6 +54,7 @@ type WatsonAssistantChatOptions = {
   region: string;
   serviceInstanceID: string;
   clientVersion: string;
+  identityToken: string;
   onLoad(instance: WebChatInstance): void | Promise<void>;
 };
 
@@ -102,7 +109,7 @@ const clientVersion =
 
 const isConfigured = Boolean(integrationID && region && serviceInstanceID);
 
-async function fetchAssistantIdentity(): Promise<AssistantIdentity | null> {
+async function fetchAssistantIdentity(): Promise<AssistantIdentity> {
   const response = await fetch("/api/assistant/session", {
     method: "POST",
     credentials: "same-origin",
@@ -112,7 +119,6 @@ async function fetchAssistantIdentity(): Promise<AssistantIdentity | null> {
     cache: "no-store",
   });
 
-  if (response.status === 401) return null;
   if (!response.ok) {
     throw new Error(`Falha ao preparar a sessão do Assistant (${response.status}).`);
   }
@@ -120,7 +126,7 @@ async function fetchAssistantIdentity(): Promise<AssistantIdentity | null> {
   return response.json() as Promise<AssistantIdentity>;
 }
 
-function setActionSkillVariables(
+function setPublicActionSkillVariables(
   event: WebChatEvent,
   identity: AssistantIdentity | null
 ) {
@@ -134,16 +140,18 @@ function setActionSkillVariables(
     const variables = event.data.context.skills[actionSkill]
       .skill_variables as Record<string, unknown>;
 
-    variables.reuse_authenticated = Boolean(identity);
+    variables.reuse_authenticated = identity?.authenticated ?? false;
 
-    if (identity) {
-      variables.reuse_action_token = identity.actionToken;
+    if (identity?.authenticated) {
       variables.reuse_token_expires_at = identity.expiresAt;
-      variables.reuse_user_name = identity.displayName;
+
+      if (identity.displayName) {
+        variables.reuse_user_name = identity.displayName;
+      }
+
       continue;
     }
 
-    delete variables.reuse_action_token;
     delete variables.reuse_token_expires_at;
     delete variables.reuse_user_name;
   }
@@ -230,77 +238,15 @@ export default function WatsonAssistantChat() {
 
     let mounted = true;
     let identity: AssistantIdentity | null = null;
-    let identityCheckedAt = 0;
 
     async function getIdentity() {
-      const expiresAt = identity ? Date.parse(identity.expiresAt) : 0;
-      const tokenIsFresh = expiresAt > Date.now() + 60_000;
-      const anonymousCheckIsFresh =
-        !identity && Date.now() - identityCheckedAt < 60_000;
-
-      if (tokenIsFresh || anonymousCheckIsFresh) return identity;
-
-      try {
-        identity = await fetchAssistantIdentity();
-      } catch (error) {
-        console.error(error);
-        identity = null;
-      } finally {
-        identityCheckedAt = Date.now();
-      }
-
+      identity = await fetchAssistantIdentity();
       return identity;
     }
 
-    window.watsonAssistantChatOptions = {
-      integrationID,
-      region,
-      serviceInstanceID,
-      clientVersion,
-      async onLoad(instance) {
-        await instance.updateLocale?.("pt-BR");
-        await instance.updateHomeScreenConfig?.({
-          is_on: true,
-          greeting:
-            "Olá! Sou o Assistente ReUse. Posso ajudar você a anunciar, encontrar e gerenciar itens. Como posso ajudar?",
-          starters: {
-            is_on: true,
-            buttons: [
-              { label: "Como cadastrar um novo item?" },
-              { label: "Como encontrar itens?" },
-              { label: "Como demonstrar interesse?" },
-              { label: "Como gerenciar anúncios?" },
-            ],
-          },
-        });
+    function appendWebChatScript() {
+      if (document.getElementById(SCRIPT_ID)) return;
 
-        const currentIdentity = await getIdentity();
-
-        if (currentIdentity) {
-          instance.updateUserID(currentIdentity.assistantUserId);
-        }
-
-        instance.on({
-          type: "pre:send",
-          handler(event) {
-            setActionSkillVariables(event, identity);
-            void getIdentity();
-          },
-        });
-
-        instance.updateCSSVariables?.({
-          "$focus": "#2F7D5A",
-          "$interactive-01": "#2F7D5A",
-          "$interactive-02": "#20563E",
-        });
-
-        await instance.render();
-        webChatInstanceRef.current = instance;
-        if (mounted) setStatus("ready");
-      },
-    };
-
-    if (!document.getElementById(SCRIPT_ID)) {
       const script = document.createElement("script");
       script.id = SCRIPT_ID;
       script.async = true;
@@ -313,6 +259,68 @@ export default function WatsonAssistantChat() {
       });
       document.head.appendChild(script);
     }
+
+    void (async () => {
+      try {
+        const initialIdentity = await getIdentity();
+        if (!mounted) return;
+
+        window.watsonAssistantChatOptions = {
+          integrationID,
+          region,
+          serviceInstanceID,
+          clientVersion,
+          identityToken: initialIdentity.identityToken,
+          async onLoad(instance) {
+            await instance.updateLocale?.("pt-BR");
+            await instance.updateHomeScreenConfig?.({
+              is_on: true,
+              greeting:
+                "Olá! Sou o Assistente ReUse. Posso ajudar você a anunciar, encontrar e gerenciar itens. Como posso ajudar?",
+              starters: {
+                is_on: true,
+                buttons: [
+                  { label: "Como cadastrar um novo item?" },
+                  { label: "Como encontrar itens?" },
+                  { label: "Como demonstrar interesse?" },
+                  { label: "Como gerenciar anúncios?" },
+                ],
+              },
+            });
+
+            instance.on({
+              type: "identityTokenExpired",
+              async handler(event) {
+                const refreshedIdentity = await getIdentity();
+                event.identityToken = refreshedIdentity.identityToken;
+              },
+            });
+
+            instance.on({
+              type: "pre:send",
+              handler(event) {
+                setPublicActionSkillVariables(event, identity);
+              },
+            });
+
+            instance.updateCSSVariables?.({
+              "$focus": "#2F7D5A",
+              "$interactive-01": "#2F7D5A",
+              "$interactive-02": "#20563E",
+            });
+
+            await instance.render();
+            webChatInstanceRef.current = instance;
+            if (mounted) setStatus("ready");
+          },
+        };
+
+        appendWebChatScript();
+      } catch (error) {
+        console.error("Não foi possível preparar a identidade do Assistant.", error);
+        if (mounted) setStatus("error");
+      }
+    })();
 
     return () => {
       mounted = false;

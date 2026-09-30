@@ -14,13 +14,6 @@
       "sensitive": false
     },
     {
-      "name": "reuse_action_token",
-      "type": "string",
-      "source": "Web Chat pre:send",
-      "sensitive": true,
-      "retention": "Somente durante a sessão; validade máxima de 10 minutos"
-    },
-    {
       "name": "reuse_token_expires_at",
       "type": "string",
       "source": "Web Chat pre:send",
@@ -59,7 +52,7 @@
           "type": "extension",
           "operationId": "getMyItemsSummary",
           "inputs": {
-            "X-ReUse-Action-Token": "reuse_action_token"
+            "X-ReUse-Action-Token": "${system_integrations.chat.private.user_payload}.reuse_action_token"
           },
           "resultVariable": "items_summary"
         },
@@ -78,7 +71,7 @@
           "type": "extension",
           "operationId": "pauseMyAvailableItems",
           "inputs": {
-            "X-ReUse-Action-Token": "reuse_action_token"
+            "X-ReUse-Action-Token": "${system_integrations.chat.private.user_payload}.reuse_action_token"
           },
           "resultVariable": "pause_result"
         },
@@ -111,7 +104,7 @@
           "type": "extension",
           "operationId": "getMyItemsSummary",
           "inputs": {
-            "X-ReUse-Action-Token": "reuse_action_token"
+            "X-ReUse-Action-Token": "${system_integrations.chat.private.user_payload}.reuse_action_token"
           },
           "resultVariable": "items_summary"
         },
@@ -130,7 +123,7 @@
           "type": "extension",
           "operationId": "reactivateMyPausedItems",
           "inputs": {
-            "X-ReUse-Action-Token": "reuse_action_token"
+            "X-ReUse-Action-Token": "${system_integrations.chat.private.user_payload}.reuse_action_token"
           },
           "resultVariable": "reactivate_result"
         },
@@ -215,6 +208,15 @@
         "Como funciona a segurança do chat?"
       ],
       "response": "O assistente só altera anúncios da conta conectada e pede confirmação antes de mudanças em lote. Nunca informe senha no chat. Combine entrega em local seguro e evite compartilhar documentos, dados bancários ou informações pessoais desnecessárias."
+    }
+  ],
+  "privateInputs": [
+    {
+      "name": "reuse_action_token",
+      "source": "JWT RS256 com user_payload criptografado",
+      "expression": "${system_integrations.chat.private.user_payload}.reuse_action_token",
+      "sensitive": true,
+      "retention": "Não é copiado para variável pública; validade máxima de 10 minutos"
     }
   ]
 }

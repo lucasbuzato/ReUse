@@ -11,6 +11,7 @@
   },
   "include": [
     "lib/assistant-action-token.ts",
+    "lib/assistant-web-chat-token.ts",
     "lib/assistant-request-auth.ts",
     "lib/assistant-item-actions.ts",
     "lib/item-status.ts",
