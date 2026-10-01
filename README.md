@@ -6,14 +6,12 @@ Aplicação acadêmica da **FIAP ON** para a Fase 6. A área escolhida da plataf
 
 - **Repositório público:** https://github.com/lucasbuzato/ReUse
 - **Aplicação hospedada:** https://reuse-lucasbuzatos-projects.vercel.app
-- **Decisões de UX e arquitetura:** [`DESIGN.md`](./DESIGN.md)
-- **Evidências de validação:** [`VALIDATION.md`](./VALIDATION.md)
 - **Atividade 02 — IBM watsonx Assistant:** [`docs/ATIVIDADE-02-WATSON.md`](./docs/ATIVIDADE-02-WATSON.md)
 - **PDF final da Atividade 02:** [`docs/Atividade-02-ReUse-Watson.pdf`](./docs/Atividade-02-ReUse-Watson.pdf)
 - **Configuração da conta IBM:** [`docs/IBM-WATSON-SETUP.md`](./docs/IBM-WATSON-SETUP.md)
 - **OpenAPI importável:** [`watson/reuse-assistant-extension.openapi.json`](./watson/reuse-assistant-extension.openapi.json)
 
-> Ambiente público validado na Vercel, com PostgreSQL Neon, migrations aplicadas e variáveis de produção configuradas.
+> Ambiente público hospedado na Vercel, com PostgreSQL Neon e variáveis de produção configuradas.
 
 ## Área desenvolvida
 
@@ -89,7 +87,7 @@ Depois do `POST`, o retorno da API atualiza imediatamente o cache do visitante c
 
 ## UX e acessibilidade
 
-- layout responsivo validado em 390 px, 768 px e desktop;
+- layout responsivo para celular, tablet e desktop;
 - navegação principal identificada semanticamente;
 - labels associados aos campos, autocomplete e nomes de controles;
 - foco visível e áreas de toque com pelo menos 44 px nos principais controles;
@@ -213,7 +211,6 @@ npm run build      # build de produção
 npm run check      # testes + lint + tipos + build
 ```
 
-A validação funcional completa e os resultados observados estão em [`VALIDATION.md`](./VALIDATION.md).
 
 ## Estrutura relevante
 
