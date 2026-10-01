@@ -115,7 +115,7 @@ test("mudanças de autenticação preservam o usuário IBM e renovam a página",
   );
 });
 
-test("entrada por voz inicia no gesto do usuário e possui timeout visível", () => {
+test("entrada por voz inicia no gesto e possui timeouts de início, escuta e envio", () => {
   const source = readFileSync(
     path.join(process.cwd(), "components/WatsonAssistantChat.tsx"),
     "utf8"
@@ -124,7 +124,12 @@ test("entrada por voz inicia no gesto do usuário e possui timeout visível", ()
   assert.match(source, /function toggleVoiceInput\(\) \{/);
   assert.match(source, /recognition\.start\(\);/);
   assert.match(source, /startTimeout = window\.setTimeout/);
+  assert.match(source, /listenTimeout = window\.setTimeout/);
+  assert.match(source, /VOICE_LISTEN_TIMEOUT_MS/);
+  assert.match(source, /VOICE_SEND_TIMEOUT_MS/);
+  assert.match(source, /voice_send_timeout/);
   assert.match(source, /O Chrome não iniciou o reconhecimento de voz/);
+  assert.match(source, /O Chrome não concluiu o reconhecimento da fala/);
   assert.match(source, /getVoiceErrorMessage\(event\.error\)/);
   assert.doesNotMatch(source, /navigator\.mediaDevices\.getUserMedia/);
 });

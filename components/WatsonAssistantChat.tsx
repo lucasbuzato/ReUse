@@ -98,6 +98,9 @@ declare global {
 
 const SCRIPT_ID = "reuse-watson-assistant-web-chat";
 const ACTION_SKILLS = ["actions skill", "action skill"] as const;
+const VOICE_START_TIMEOUT_MS = 8_000;
+const VOICE_LISTEN_TIMEOUT_MS = 12_000;
+const VOICE_SEND_TIMEOUT_MS = 10_000;
 
 const integrationID =
   process.env.NEXT_PUBLIC_IBM_ASSISTANT_INTEGRATION_ID ?? "";
@@ -177,6 +180,23 @@ function getVoiceErrorMessage(error: string) {
   return "Não foi possível iniciar a entrada por voz. Tente novamente.";
 }
 
+function withTimeout<T>(operation: Promise<T>, timeoutMs: number, code: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error(code)), timeoutMs);
+
+    operation.then(
+      (value) => {
+        window.clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeout);
+        reject(error);
+      }
+    );
+  });
+}
+
 export default function WatsonAssistantChat() {
   const [status, setStatus] = useState<
     "disabled" | "loading" | "ready" | "error"
@@ -214,11 +234,17 @@ export default function WatsonAssistantChat() {
     let recognitionFailed = false;
     let timedOut = false;
     let startTimeout: number | null = null;
+    let listenTimeout: number | null = null;
 
-    const clearStartTimeout = () => {
+    const clearVoiceTimeouts = () => {
       if (startTimeout !== null) {
         window.clearTimeout(startTimeout);
         startTimeout = null;
+      }
+
+      if (listenTimeout !== null) {
+        window.clearTimeout(listenTimeout);
+        listenTimeout = null;
       }
     };
 
@@ -227,12 +253,24 @@ export default function WatsonAssistantChat() {
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognition.onstart = () => {
-      clearStartTimeout();
+      clearVoiceTimeouts();
       setVoiceFeedback("Ouvindo… fale agora.");
       setVoiceStatus("listening");
+      listenTimeout = window.setTimeout(() => {
+        if (receivedResult || recognitionFailed) return;
+
+        timedOut = true;
+        recognitionFailed = true;
+        speechRecognitionRef.current = null;
+        setVoiceFeedback(
+          "O Chrome não concluiu o reconhecimento da fala. Verifique o microfone e tente novamente."
+        );
+        setVoiceStatus("error");
+        recognition.abort();
+      }, VOICE_LISTEN_TIMEOUT_MS);
     };
     recognition.onresult = (event) => {
-      clearStartTimeout();
+      clearVoiceTimeouts();
       receivedResult = true;
       const transcript = event.results[0]?.[0]?.transcript.trim();
 
@@ -246,19 +284,33 @@ export default function WatsonAssistantChat() {
       setVoiceStatus("sending");
       void (async () => {
         try {
-          await instance.openWindow?.();
-          await instance.send({ input: { text: transcript } });
+          const openOperation = instance.openWindow?.();
+          if (openOperation) {
+            void Promise.resolve(openOperation).catch((error) => {
+              console.error("Não foi possível abrir o chat antes do envio por voz.", error);
+            });
+          }
+
+          await withTimeout(
+            Promise.resolve(instance.send({ input: { text: transcript } })),
+            VOICE_SEND_TIMEOUT_MS,
+            "voice_send_timeout"
+          );
           setVoiceFeedback("");
           setVoiceStatus("idle");
         } catch (error) {
           console.error("Não foi possível enviar a mensagem por voz.", error);
-          setVoiceFeedback("Reconheci sua fala, mas não consegui enviar a mensagem.");
+          setVoiceFeedback(
+            error instanceof Error && error.message === "voice_send_timeout"
+              ? "Reconheci sua fala, mas o chat não confirmou o envio. Tente novamente."
+              : "Reconheci sua fala, mas não consegui enviar a mensagem."
+          );
           setVoiceStatus("error");
         }
       })();
     };
     recognition.onerror = (event) => {
-      clearStartTimeout();
+      clearVoiceTimeouts();
       recognitionFailed = true;
 
       if (event.error === "aborted") {
@@ -274,7 +326,7 @@ export default function WatsonAssistantChat() {
       setVoiceStatus("error");
     };
     recognition.onend = () => {
-      clearStartTimeout();
+      clearVoiceTimeouts();
       speechRecognitionRef.current = null;
 
       if (timedOut) return;
@@ -301,10 +353,10 @@ export default function WatsonAssistantChat() {
         );
         setVoiceStatus("error");
         recognition.abort();
-      }, 8_000);
+      }, VOICE_START_TIMEOUT_MS);
       recognition.start();
     } catch (error) {
-      clearStartTimeout();
+      clearVoiceTimeouts();
       speechRecognitionRef.current = null;
       console.error("Não foi possível iniciar o reconhecimento de voz.", error);
       setVoiceFeedback("Não foi possível iniciar o microfone. Recarregue a página e tente novamente.");
