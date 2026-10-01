@@ -27,11 +27,7 @@ test("OpenAPI da extensão segue as restrições principais do watsonx Assistant
       .flatMap((pathItem) => Object.values(pathItem))
       .map((operation) => operation.operationId)
       .sort(),
-    [
-      "getMyItemsSummary",
-      "pauseMyAvailableItems",
-      "reactivateMyPausedItems",
-    ]
+    ["getMyItemsSummary", "pauseMyAvailableItems", "reactivateMyPausedItems"]
   );
 });
 
@@ -42,7 +38,9 @@ test("catálogo cobre automação e orientação em português", () => {
     examples: string[];
   }>;
 
-  const automation = actions.filter((action) => action.category === "automation");
+  const automation = actions.filter(
+    (action) => action.category === "automation"
+  );
   const guidance = actions.filter((action) => action.category === "guidance");
 
   assert.equal(automation.length >= 2, true);
@@ -70,7 +68,9 @@ test("catálogo cobre automação e orientação em português", () => {
   assert.equal(extensionInputs.length, 4);
   assert.equal(
     extensionInputs.every(
-      (value) => value === "${system_integrations.chat.private.user_payload}.reuse_action_token"
+      (value) =>
+        value ===
+        "${system_integrations.chat.private.user_payload}.reuse_action_token"
     ),
     true
   );
@@ -115,7 +115,7 @@ test("mudanças de autenticação preservam o usuário IBM e renovam a página",
   );
 });
 
-test("entrada por voz valida o microfone, prioriza pt-BR local e limita esperas", () => {
+test("entrada por voz mantém escuta contínua e envia somente após o segundo clique", () => {
   const source = readFileSync(
     path.join(process.cwd(), "components/WatsonAssistantChat.tsx"),
     "utf8"
@@ -125,17 +125,36 @@ test("entrada por voz valida o microfone, prioriza pt-BR local e limita esperas"
   assert.match(source, /recognition\.start\(audioTrack\);/);
   assert.match(source, /microphoneStream\.getAudioTracks\(\)\[0\]/);
   assert.match(source, /start\(audioTrack\?: MediaStreamTrack\): void/);
-  assert.match(source, /startTimeout = window\.setTimeout/);
-  assert.match(source, /listenTimeout = window\.setTimeout/);
-  assert.match(source, /VOICE_LISTEN_TIMEOUT_MS/);
+  assert.match(source, /recognition\.continuous = true;/);
+  assert.match(source, /recognition\.interimResults = true;/);
+  assert.match(source, /let finalTranscript = "";/);
+  assert.match(source, /let interimTranscript = "";/);
+  assert.match(source, /let index = event\.resultIndex;/);
+  assert.match(source, /result\?\.isFinal/);
+  assert.match(source, /finalTranscript = mergeTranscripts/);
+  assert.match(source, /interimTranscript = mergeTranscripts/);
+  assert.match(source, /stopVoiceInputRef\.current\?\.\(\);/);
+  assert.match(source, /recognition\.stop\(\);/);
+  assert.match(
+    source,
+    /if \(stopRequested\) \{[\s\S]*void sendTranscript\(\);/
+  );
+  assert.match(source, /VOICE_MAX_LISTEN_MS/);
+  assert.doesNotMatch(source, /VOICE_LISTEN_TIMEOUT_MS/);
+  assert.match(source, /Ouvindo… clique novamente no botão para enviar\./);
   assert.match(source, /VOICE_SEND_TIMEOUT_MS/);
   assert.match(source, /voice_send_timeout/);
-  assert.match(source, /navigator\.mediaDevices\.getUserMedia\(\{ audio: true \}\)/);
+  assert.match(
+    source,
+    /navigator\.mediaDevices\.getUserMedia\(\{ audio: true \}\)/
+  );
   assert.match(source, /SpeechRecognition\.available\(options\)/);
   assert.match(source, /SpeechRecognition\.install\(options\)/);
-  assert.match(source, /recognition\.processLocally = recognitionMode === "local"/);
+  assert.match(
+    source,
+    /recognition\.processLocally = recognitionMode === "local"/
+  );
   assert.match(source, /const VOICE_LANGUAGE = "pt-BR"/);
   assert.match(source, /O Chrome não iniciou o reconhecimento de voz/);
-  assert.match(source, /O Chrome não concluiu o reconhecimento da fala/);
   assert.match(source, /getVoiceErrorMessage\(event\.error\)/);
 });

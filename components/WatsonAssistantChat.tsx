@@ -58,13 +58,19 @@ type WatsonAssistantChatOptions = {
   onLoad(instance: WebChatInstance): void | Promise<void>;
 };
 
+type SpeechRecognitionResultLike = {
+  readonly isFinal: boolean;
+  readonly length: number;
+  readonly [index: number]: {
+    transcript: string;
+  };
+};
+
 type SpeechRecognitionResultEventLike = Event & {
-  results: {
-    [index: number]: {
-      [index: number]: {
-        transcript: string;
-      };
-    };
+  readonly resultIndex: number;
+  readonly results: {
+    readonly length: number;
+    readonly [index: number]: SpeechRecognitionResultLike;
   };
 };
 
@@ -88,10 +94,7 @@ type SpeechRecognitionLike = {
 };
 
 type SpeechRecognitionAvailability =
-  | "available"
-  | "downloadable"
-  | "downloading"
-  | "unavailable";
+  "available" | "downloadable" | "downloading" | "unavailable";
 
 type SpeechRecognitionOptions = {
   langs: string[];
@@ -121,7 +124,7 @@ const MICROPHONE_REQUEST_TIMEOUT_MS = 30_000;
 const LOCAL_SPEECH_CHECK_TIMEOUT_MS = 8_000;
 const LOCAL_SPEECH_INSTALL_TIMEOUT_MS = 60_000;
 const VOICE_START_TIMEOUT_MS = 8_000;
-const VOICE_LISTEN_TIMEOUT_MS = 12_000;
+const VOICE_MAX_LISTEN_MS = 60_000;
 const VOICE_SEND_TIMEOUT_MS = 10_000;
 
 const integrationID =
@@ -145,7 +148,9 @@ async function fetchAssistantIdentity(): Promise<AssistantIdentity> {
   });
 
   if (!response.ok) {
-    throw new Error(`Falha ao preparar a sessão do Assistant (${response.status}).`);
+    throw new Error(
+      `Falha ao preparar a sessão do Assistant (${response.status}).`
+    );
   }
 
   return response.json() as Promise<AssistantIdentity>;
@@ -196,13 +201,22 @@ function getVoiceErrorMessage(error: string) {
   }
 
   if (error === "network") {
-    return "O serviço de reconhecimento de voz está indisponível. Tente novamente.";
+    const isOpera =
+      typeof navigator !== "undefined" && /\bOPR\//.test(navigator.userAgent);
+
+    return isOpera
+      ? "A entrada por voz não é compatível com este navegador. Use o Google Chrome."
+      : "O serviço de reconhecimento de voz está indisponível. Tente novamente no Google Chrome.";
   }
 
   return "Não foi possível iniciar a entrada por voz. Tente novamente.";
 }
 
-function withTimeout<T>(operation: Promise<T>, timeoutMs: number, code: string) {
+function withTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  code: string
+) {
   return new Promise<T>((resolve, reject) => {
     const timeout = window.setTimeout(() => reject(new Error(code)), timeoutMs);
 
@@ -320,11 +334,12 @@ export default function WatsonAssistantChat() {
       Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition)
   );
   const [voiceStatus, setVoiceStatus] = useState<
-    "idle" | "requesting" | "listening" | "sending" | "error"
+    "idle" | "requesting" | "listening" | "stopping" | "sending" | "error"
   >("idle");
   const [voiceFeedback, setVoiceFeedback] = useState("");
   const webChatInstanceRef = useRef<WebChatInstance | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const stopVoiceInputRef = useRef<(() => void) | null>(null);
   const microphoneStreamRef = useRef<MediaStream | null>(null);
 
   async function startVoiceInput() {
@@ -333,10 +348,14 @@ export default function WatsonAssistantChat() {
     const instance = webChatInstanceRef.current;
 
     if (!SpeechRecognition || !instance) {
-      setVoiceFeedback("A entrada por voz não está disponível neste navegador.");
+      setVoiceFeedback(
+        "A entrada por voz não está disponível neste navegador."
+      );
       setVoiceStatus("error");
       return;
     }
+
+    const webChatInstance = instance;
 
     setVoiceFeedback("Verificando acesso ao microfone…");
     setVoiceStatus("requesting");
@@ -383,158 +402,351 @@ export default function WatsonAssistantChat() {
     const audioTrack = microphoneStream.getAudioTracks()[0];
     if (!audioTrack || audioTrack.readyState !== "live") {
       releaseMicrophone();
-      setVoiceFeedback("O Chrome autorizou o microfone, mas não forneceu uma faixa de áudio ativa.");
+      setVoiceFeedback(
+        "O Chrome autorizou o microfone, mas não forneceu uma faixa de áudio ativa."
+      );
       setVoiceStatus("error");
       return;
     }
 
     const recognition = new SpeechRecognition();
-    let receivedResult = false;
+    const processedFinalResultIndexes = new Set<number>();
+    let finalTranscript = "";
+    let interimTranscript = "";
     let recognitionFailed = false;
     let timedOut = false;
+    let sendStarted = false;
+    let sessionClosed = false;
+    let sessionStarted = false;
+    let stopRequested = false;
+    let recognitionIsActive = false;
     let startTimeout: number | null = null;
-    let listenTimeout: number | null = null;
+    let sessionTimeout: number | null = null;
+    let restartTimeout: number | null = null;
 
-    const clearVoiceTimeouts = () => {
+    const mergeTranscripts = (...parts: string[]) =>
+      parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+
+    const getTranscript = () =>
+      mergeTranscripts(finalTranscript, interimTranscript);
+
+    const updateListeningFeedback = () => {
+      const transcript = getTranscript();
+      const preview =
+        transcript.length > 90 ? `${transcript.slice(0, 87)}…` : transcript;
+
+      setVoiceFeedback(
+        preview
+          ? `Ouvindo… clique novamente no botão para enviar. “${preview}”`
+          : "Ouvindo… clique novamente no botão para enviar."
+      );
+    };
+
+    const clearStartTimeout = () => {
       if (startTimeout !== null) {
         window.clearTimeout(startTimeout);
         startTimeout = null;
       }
+    };
 
-      if (listenTimeout !== null) {
-        window.clearTimeout(listenTimeout);
-        listenTimeout = null;
+    const clearSessionTimeout = () => {
+      if (sessionTimeout !== null) {
+        window.clearTimeout(sessionTimeout);
+        sessionTimeout = null;
       }
     };
 
-    recognition.lang = VOICE_LANGUAGE;
-    recognition.processLocally = recognitionMode === "local";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onstart = () => {
-      clearVoiceTimeouts();
-      setVoiceFeedback("Ouvindo… fale agora.");
-      setVoiceStatus("listening");
-      listenTimeout = window.setTimeout(() => {
-        if (receivedResult || recognitionFailed) return;
-
-        timedOut = true;
-        recognitionFailed = true;
-        speechRecognitionRef.current = null;
-        releaseMicrophone();
-        setVoiceFeedback(
-          "O Chrome não concluiu o reconhecimento da fala. Verifique o microfone e tente novamente."
-        );
-        setVoiceStatus("error");
-        recognition.abort();
-      }, VOICE_LISTEN_TIMEOUT_MS);
+    const clearRestartTimeout = () => {
+      if (restartTimeout !== null) {
+        window.clearTimeout(restartTimeout);
+        restartTimeout = null;
+      }
     };
-    recognition.onresult = (event) => {
+
+    const clearVoiceTimeouts = () => {
+      clearStartTimeout();
+      clearSessionTimeout();
+      clearRestartTimeout();
+    };
+
+    const finishSession = (abortRecognition = false) => {
+      if (sessionClosed) return;
+
+      sessionClosed = true;
+      recognitionIsActive = false;
       clearVoiceTimeouts();
-      receivedResult = true;
+
+      if (speechRecognitionRef.current === recognition) {
+        speechRecognitionRef.current = null;
+        stopVoiceInputRef.current = null;
+      }
+
+      if (abortRecognition) {
+        try {
+          recognition.abort();
+        } catch {
+          // A sessão pode já ter terminado no navegador.
+        }
+      }
+
       releaseMicrophone();
-      const transcript = event.results[0]?.[0]?.transcript.trim();
+    };
+
+    const failVoiceSession = (
+      message: string,
+      error?: unknown,
+      abortRecognition = false
+    ) => {
+      if (sessionClosed || sendStarted) return;
+
+      recognitionFailed = true;
+      if (error !== undefined) {
+        console.error("Não foi possível reconhecer a mensagem por voz.", error);
+      }
+      finishSession(abortRecognition);
+      setVoiceFeedback(message);
+      setVoiceStatus("error");
+    };
+
+    const commitInterimTranscript = () => {
+      if (!interimTranscript) return;
+
+      finalTranscript = mergeTranscripts(finalTranscript, interimTranscript);
+      interimTranscript = "";
+    };
+
+    async function sendTranscript() {
+      if (sendStarted || sessionClosed) return;
+
+      sendStarted = true;
+      const transcript = getTranscript();
+      finishSession();
 
       if (!transcript) {
-        setVoiceFeedback("Não detectei sua fala. Clique no microfone e tente novamente.");
+        setVoiceFeedback(
+          "Não detectei sua fala. Clique no microfone e tente novamente."
+        );
         setVoiceStatus("error");
         return;
       }
 
       setVoiceFeedback("Enviando a mensagem reconhecida…");
       setVoiceStatus("sending");
-      void (async () => {
-        try {
-          const openOperation = instance.openWindow?.();
-          if (openOperation) {
-            void Promise.resolve(openOperation).catch((error) => {
-              console.error("Não foi possível abrir o chat antes do envio por voz.", error);
-            });
-          }
 
-          await withTimeout(
-            Promise.resolve(instance.send({ input: { text: transcript } })),
-            VOICE_SEND_TIMEOUT_MS,
-            "voice_send_timeout"
-          );
-          setVoiceFeedback("");
-          setVoiceStatus("idle");
-        } catch (error) {
-          console.error("Não foi possível enviar a mensagem por voz.", error);
-          setVoiceFeedback(
-            error instanceof Error && error.message === "voice_send_timeout"
-              ? "Reconheci sua fala, mas o chat não confirmou o envio. Tente novamente."
-              : "Reconheci sua fala, mas não consegui enviar a mensagem."
-          );
-          setVoiceStatus("error");
+      try {
+        const openOperation = webChatInstance.openWindow?.();
+        if (openOperation) {
+          void Promise.resolve(openOperation).catch((error) => {
+            console.error(
+              "Não foi possível abrir o chat antes do envio por voz.",
+              error
+            );
+          });
         }
-      })();
+
+        await withTimeout(
+          Promise.resolve(
+            webChatInstance.send({ input: { text: transcript } })
+          ),
+          VOICE_SEND_TIMEOUT_MS,
+          "voice_send_timeout"
+        );
+        setVoiceFeedback("");
+        setVoiceStatus("idle");
+      } catch (error) {
+        console.error("Não foi possível enviar a mensagem por voz.", error);
+        setVoiceFeedback(
+          error instanceof Error && error.message === "voice_send_timeout"
+            ? "Reconheci sua fala, mas o chat não confirmou o envio. Tente novamente."
+            : "Reconheci sua fala, mas não consegui enviar a mensagem."
+        );
+        setVoiceStatus("error");
+      }
+    }
+
+    const startRecognition = () => {
+      if (sessionClosed || stopRequested || recognitionFailed || timedOut)
+        return;
+
+      clearRestartTimeout();
+      processedFinalResultIndexes.clear();
+      clearStartTimeout();
+      startTimeout = window.setTimeout(() => {
+        failVoiceSession(
+          "O Chrome não iniciou o reconhecimento de voz. Recarregue a página e tente novamente.",
+          new Error("voice_start_timeout"),
+          true
+        );
+      }, VOICE_START_TIMEOUT_MS);
+
+      try {
+        recognition.start(audioTrack);
+      } catch (error) {
+        failVoiceSession(
+          "Não foi possível iniciar o microfone. Recarregue a página e tente novamente.",
+          error,
+          true
+        );
+      }
     };
-    recognition.onerror = (event) => {
-      clearVoiceTimeouts();
-      recognitionFailed = true;
-      releaseMicrophone();
 
-      if (receivedResult) return;
+    const requestStop = () => {
+      if (sessionClosed || sendStarted || stopRequested) return;
 
-      if (event.error === "aborted") {
-        if (!timedOut) {
-          setVoiceFeedback("");
-          setVoiceStatus("idle");
+      stopRequested = true;
+      clearSessionTimeout();
+      clearRestartTimeout();
+      setVoiceFeedback("Finalizando a transcrição…");
+      setVoiceStatus("stopping");
+
+      if (!recognitionIsActive) {
+        void sendTranscript();
+        return;
+      }
+
+      try {
+        recognition.stop();
+      } catch (error) {
+        console.warn(
+          "O Chrome já havia encerrado a escuta; enviando a transcrição acumulada.",
+          error
+        );
+        void sendTranscript();
+      }
+    };
+
+    recognition.lang = VOICE_LANGUAGE;
+    recognition.processLocally = recognitionMode === "local";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => {
+      if (sessionClosed) {
+        try {
+          recognition.abort();
+        } catch {
+          // A sessão já foi encerrada.
         }
         return;
       }
 
-      console.error("Não foi possível reconhecer a mensagem por voz.", event.error);
-      setVoiceFeedback(getVoiceErrorMessage(event.error));
-      setVoiceStatus("error");
+      clearStartTimeout();
+      recognitionIsActive = true;
+
+      if (!sessionStarted) {
+        sessionStarted = true;
+        sessionTimeout = window.setTimeout(() => {
+          if (stopRequested || sendStarted || sessionClosed) return;
+
+          timedOut = true;
+          failVoiceSession(
+            "A escuta foi encerrada após 60 segundos por segurança. Clique no microfone para tentar novamente.",
+            new Error("voice_listen_timeout"),
+            true
+          );
+        }, VOICE_MAX_LISTEN_MS);
+      }
+
+      updateListeningFeedback();
+      setVoiceStatus("listening");
+    };
+    recognition.onresult = (event) => {
+      if (sessionClosed || sendStarted) return;
+
+      for (
+        let index = event.resultIndex;
+        index < event.results.length;
+        index += 1
+      ) {
+        const result = event.results[index];
+        const transcript = result?.[0]?.transcript.trim() ?? "";
+
+        if (
+          result?.isFinal &&
+          transcript &&
+          !processedFinalResultIndexes.has(index)
+        ) {
+          finalTranscript = mergeTranscripts(finalTranscript, transcript);
+          processedFinalResultIndexes.add(index);
+        }
+      }
+
+      const interimParts: string[] = [];
+      for (let index = 0; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result?.[0]?.transcript.trim() ?? "";
+
+        if (result && !result.isFinal && transcript) {
+          interimParts.push(transcript);
+        }
+      }
+      interimTranscript = mergeTranscripts(...interimParts);
+
+      if (!stopRequested) {
+        updateListeningFeedback();
+      }
+    };
+    recognition.onerror = (event) => {
+      if (sessionClosed || sendStarted) return;
+
+      if (event.error === "aborted") {
+        return;
+      }
+
+      if (event.error === "no-speech" && !stopRequested) {
+        updateListeningFeedback();
+        return;
+      }
+
+      failVoiceSession(getVoiceErrorMessage(event.error), event.error);
     };
     recognition.onend = () => {
-      clearVoiceTimeouts();
-      speechRecognitionRef.current = null;
-      releaseMicrophone();
+      recognitionIsActive = false;
+      clearStartTimeout();
 
-      if (timedOut) return;
+      if (sessionClosed || sendStarted) return;
 
-      if (!receivedResult && !recognitionFailed) {
-        setVoiceFeedback("Não detectei sua fala. Clique no microfone e tente novamente.");
-        setVoiceStatus("error");
+      if (stopRequested) {
+        void sendTranscript();
+        return;
       }
+
+      if (recognitionFailed || timedOut) return;
+
+      if (audioTrack.readyState !== "live") {
+        failVoiceSession(
+          "O microfone foi desconectado durante a escuta. Conecte-o e tente novamente."
+        );
+        return;
+      }
+
+      // Alguns navegadores encerram a sessão após uma pausa mesmo com continuous=true.
+      // Preservamos o trecho parcial e retomamos com a mesma faixa autorizada.
+      commitInterimTranscript();
+      processedFinalResultIndexes.clear();
+      updateListeningFeedback();
+      setVoiceStatus("listening");
+      restartTimeout = window.setTimeout(startRecognition, 250);
     };
 
     speechRecognitionRef.current = recognition;
+    stopVoiceInputRef.current = requestStop;
     setVoiceFeedback("Iniciando reconhecimento de voz…");
     setVoiceStatus("requesting");
-
-    try {
-      startTimeout = window.setTimeout(() => {
-        if (receivedResult || recognitionFailed) return;
-
-        timedOut = true;
-        recognitionFailed = true;
-        speechRecognitionRef.current = null;
-        releaseMicrophone();
-        setVoiceFeedback(
-          "O Chrome não iniciou o reconhecimento de voz. Recarregue a página e tente novamente."
-        );
-        setVoiceStatus("error");
-        recognition.abort();
-      }, VOICE_START_TIMEOUT_MS);
-      recognition.start(audioTrack);
-    } catch (error) {
-      clearVoiceTimeouts();
-      speechRecognitionRef.current = null;
-      releaseMicrophone();
-      console.error("Não foi possível iniciar o reconhecimento de voz.", error);
-      setVoiceFeedback("Não foi possível iniciar o microfone. Recarregue a página e tente novamente.");
-      setVoiceStatus("error");
-    }
+    startRecognition();
   }
 
   function toggleVoiceInput() {
     if (voiceStatus === "listening") {
-      speechRecognitionRef.current?.stop();
+      stopVoiceInputRef.current?.();
+      return;
+    }
+
+    if (
+      voiceStatus === "requesting" ||
+      voiceStatus === "stopping" ||
+      voiceStatus === "sending"
+    ) {
       return;
     }
 
@@ -562,7 +774,9 @@ export default function WatsonAssistantChat() {
         "https://web-chat.global.assistant.watson.appdomain.cloud/versions/" +
         `${encodeURIComponent(clientVersion)}/WatsonAssistantChatEntry.js`;
       script.addEventListener("error", () => {
-        console.error("Não foi possível carregar o IBM watsonx Assistant Web Chat.");
+        console.error(
+          "Não foi possível carregar o IBM watsonx Assistant Web Chat."
+        );
         if (mounted) setStatus("error");
       });
       document.head.appendChild(script);
@@ -612,7 +826,7 @@ export default function WatsonAssistantChat() {
             });
 
             instance.updateCSSVariables?.({
-              "$focus": "#2F7D5A",
+              $focus: "#2F7D5A",
               "$interactive-01": "#2F7D5A",
               "$interactive-02": "#20563E",
             });
@@ -625,7 +839,10 @@ export default function WatsonAssistantChat() {
 
         appendWebChatScript();
       } catch (error) {
-        console.error("Não foi possível preparar a identidade do Assistant.", error);
+        console.error(
+          "Não foi possível preparar a identidade do Assistant.",
+          error
+        );
         if (mounted) setStatus("error");
       }
     })();
@@ -634,6 +851,7 @@ export default function WatsonAssistantChat() {
       mounted = false;
       speechRecognitionRef.current?.abort();
       speechRecognitionRef.current = null;
+      stopVoiceInputRef.current = null;
       microphoneStreamRef.current?.getTracks().forEach((track) => track.stop());
       microphoneStreamRef.current = null;
       webChatInstanceRef.current = null;
@@ -642,12 +860,14 @@ export default function WatsonAssistantChat() {
 
   const voiceLabel =
     voiceStatus === "listening"
-      ? "Parar entrada por voz"
+      ? "Parar e enviar entrada por voz"
       : voiceStatus === "requesting"
         ? "Solicitando acesso ao microfone"
-        : voiceStatus === "sending"
-          ? "Enviando mensagem por voz"
-          : "Falar com o Assistente ReUse";
+        : voiceStatus === "stopping"
+          ? "Finalizando entrada por voz"
+          : voiceStatus === "sending"
+            ? "Enviando mensagem por voz"
+            : "Falar com o Assistente ReUse";
 
   return (
     <>
@@ -684,20 +904,29 @@ export default function WatsonAssistantChat() {
           <button
             type="button"
             onClick={toggleVoiceInput}
-            disabled={voiceStatus === "requesting" || voiceStatus === "sending"}
+            disabled={
+              voiceStatus === "requesting" ||
+              voiceStatus === "stopping" ||
+              voiceStatus === "sending"
+            }
             aria-label={voiceLabel}
-            aria-pressed={voiceStatus === "listening"}
+            aria-pressed={
+              voiceStatus === "listening" || voiceStatus === "stopping"
+            }
             title={voiceLabel}
             data-testid="watson-assistant-voice"
             data-state={voiceStatus}
             className={`fixed bottom-24 right-5 z-[100000] flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2F7D5A]/30 disabled:cursor-wait disabled:opacity-70 md:bottom-6 md:right-[28rem] ${
-              voiceStatus === "listening"
+              voiceStatus === "listening" || voiceStatus === "stopping"
                 ? "bg-red-600 hover:bg-red-700"
                 : "bg-[#2F7D5A] hover:bg-[#20563E]"
             }`}
           >
-            {voiceStatus === "listening" ? (
-              <span aria-hidden="true" className="h-4 w-4 rounded-sm bg-white" />
+            {voiceStatus === "listening" || voiceStatus === "stopping" ? (
+              <span
+                aria-hidden="true"
+                className="h-4 w-4 rounded-sm bg-white"
+              />
             ) : (
               <svg
                 viewBox="0 0 24 24"
@@ -705,7 +934,14 @@ export default function WatsonAssistantChat() {
                 className="h-6 w-6"
                 fill="none"
               >
-                <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" />
+                <rect
+                  x="9"
+                  y="3"
+                  width="6"
+                  height="11"
+                  rx="3"
+                  fill="currentColor"
+                />
                 <path
                   d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"
                   stroke="currentColor"
