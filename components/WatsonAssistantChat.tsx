@@ -77,6 +77,7 @@ type SpeechRecognitionLike = {
   continuous: boolean;
   interimResults: boolean;
   maxAlternatives: number;
+  processLocally?: boolean;
   start(): void;
   stop(): void;
   abort(): void;
@@ -86,7 +87,24 @@ type SpeechRecognitionLike = {
   onend: (() => void) | null;
 };
 
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+type SpeechRecognitionAvailability =
+  | "available"
+  | "downloadable"
+  | "downloading"
+  | "unavailable";
+
+type SpeechRecognitionOptions = {
+  langs: string[];
+  processLocally: boolean;
+};
+
+type SpeechRecognitionConstructor = {
+  new (): SpeechRecognitionLike;
+  available?(
+    options: SpeechRecognitionOptions
+  ): Promise<SpeechRecognitionAvailability>;
+  install?(options: SpeechRecognitionOptions): Promise<boolean>;
+};
 
 declare global {
   interface Window {
@@ -98,6 +116,10 @@ declare global {
 
 const SCRIPT_ID = "reuse-watson-assistant-web-chat";
 const ACTION_SKILLS = ["actions skill", "action skill"] as const;
+const VOICE_LANGUAGE = "pt-BR";
+const MICROPHONE_REQUEST_TIMEOUT_MS = 30_000;
+const LOCAL_SPEECH_CHECK_TIMEOUT_MS = 8_000;
+const LOCAL_SPEECH_INSTALL_TIMEOUT_MS = 60_000;
 const VOICE_START_TIMEOUT_MS = 8_000;
 const VOICE_LISTEN_TIMEOUT_MS = 12_000;
 const VOICE_SEND_TIMEOUT_MS = 10_000;
@@ -197,6 +219,95 @@ function withTimeout<T>(operation: Promise<T>, timeoutMs: number, code: string) 
   });
 }
 
+function requestMicrophoneAccess() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return Promise.reject(new Error("microphone_api_unavailable"));
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const timeout = window.setTimeout(() => {
+      settled = true;
+      reject(new Error("microphone_request_timeout"));
+    }, MICROPHONE_REQUEST_TIMEOUT_MS);
+
+    void navigator.mediaDevices.getUserMedia({ audio: true }).then(
+      (stream) => {
+        stream.getTracks().forEach((track) => track.stop());
+        if (settled) return;
+
+        settled = true;
+        window.clearTimeout(timeout);
+        resolve();
+      },
+      (error) => {
+        if (settled) return;
+
+        settled = true;
+        window.clearTimeout(timeout);
+        reject(error);
+      }
+    );
+  });
+}
+
+function getMicrophoneErrorMessage(error: unknown) {
+  const name = error instanceof DOMException ? error.name : "";
+  const code = error instanceof Error ? error.message : "";
+
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return "O Chrome bloqueou o microfone. Permita o acesso no ícone ao lado do endereço e tente novamente.";
+  }
+
+  if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+    return "Nenhum microfone foi encontrado pelo Chrome.";
+  }
+
+  if (name === "NotReadableError" || name === "TrackStartError") {
+    return "O microfone está indisponível ou sendo usado por outro aplicativo.";
+  }
+
+  if (code === "microphone_request_timeout") {
+    return "O Chrome não respondeu ao pedido de acesso ao microfone. Verifique as permissões e tente novamente.";
+  }
+
+  return "Não foi possível acessar o microfone pelo Chrome.";
+}
+
+async function prepareSpeechRecognition(
+  SpeechRecognition: SpeechRecognitionConstructor
+) {
+  if (!SpeechRecognition.available || !SpeechRecognition.install) {
+    return "cloud" as const;
+  }
+
+  const options: SpeechRecognitionOptions = {
+    langs: [VOICE_LANGUAGE],
+    processLocally: true,
+  };
+  const availability = await withTimeout(
+    SpeechRecognition.available(options),
+    LOCAL_SPEECH_CHECK_TIMEOUT_MS,
+    "local_speech_check_timeout"
+  );
+
+  if (availability === "available") {
+    return "local" as const;
+  }
+
+  if (availability === "unavailable") {
+    return "cloud" as const;
+  }
+
+  const installed = await withTimeout(
+    SpeechRecognition.install(options),
+    LOCAL_SPEECH_INSTALL_TIMEOUT_MS,
+    "local_speech_install_timeout"
+  );
+
+  return installed ? ("installed" as const) : ("cloud" as const);
+}
+
 export default function WatsonAssistantChat() {
   const [status, setStatus] = useState<
     "disabled" | "loading" | "ready" | "error"
@@ -213,12 +324,7 @@ export default function WatsonAssistantChat() {
   const webChatInstanceRef = useRef<WebChatInstance | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  function toggleVoiceInput() {
-    if (voiceStatus === "listening") {
-      speechRecognitionRef.current?.stop();
-      return;
-    }
-
+  async function startVoiceInput() {
     const SpeechRecognition =
       window.SpeechRecognition ?? window.webkitSpeechRecognition;
     const instance = webChatInstanceRef.current;
@@ -226,6 +332,37 @@ export default function WatsonAssistantChat() {
     if (!SpeechRecognition || !instance) {
       setVoiceFeedback("A entrada por voz não está disponível neste navegador.");
       setVoiceStatus("error");
+      return;
+    }
+
+    setVoiceFeedback("Verificando acesso ao microfone…");
+    setVoiceStatus("requesting");
+
+    try {
+      await requestMicrophoneAccess();
+    } catch (error) {
+      console.error("Não foi possível acessar o microfone.", error);
+      setVoiceFeedback(getMicrophoneErrorMessage(error));
+      setVoiceStatus("error");
+      return;
+    }
+
+    setVoiceFeedback("Preparando reconhecimento de voz em português…");
+
+    let recognitionMode: "local" | "cloud" | "installed";
+
+    try {
+      recognitionMode = await prepareSpeechRecognition(SpeechRecognition);
+    } catch (error) {
+      console.error("Não foi possível preparar o reconhecimento local.", error);
+      recognitionMode = "cloud";
+    }
+
+    if (recognitionMode === "installed") {
+      setVoiceFeedback(
+        "Reconhecimento de voz em português preparado. Clique no microfone novamente para falar."
+      );
+      setVoiceStatus("idle");
       return;
     }
 
@@ -248,7 +385,8 @@ export default function WatsonAssistantChat() {
       }
     };
 
-    recognition.lang = "pt-BR";
+    recognition.lang = VOICE_LANGUAGE;
+    recognition.processLocally = recognitionMode === "local";
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
@@ -362,6 +500,15 @@ export default function WatsonAssistantChat() {
       setVoiceFeedback("Não foi possível iniciar o microfone. Recarregue a página e tente novamente.");
       setVoiceStatus("error");
     }
+  }
+
+  function toggleVoiceInput() {
+    if (voiceStatus === "listening") {
+      speechRecognitionRef.current?.stop();
+      return;
+    }
+
+    void startVoiceInput();
   }
 
   useEffect(() => {
