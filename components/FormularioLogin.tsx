@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function FormularioLogin() {
-  const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "" });
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
@@ -22,8 +20,7 @@ export default function FormularioLogin() {
       });
 
       if (res.ok) {
-        router.push("/perfil");
-        router.refresh();
+        window.location.assign("/perfil");
         return;
       }
 

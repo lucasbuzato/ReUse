@@ -130,6 +130,11 @@ export default async function ItemDetailPage({ params }: Props) {
       className: "border-green-200 bg-green-100 text-green-800",
       dot: "bg-green-500",
     },
+    PAUSADO: {
+      label: "Pausado",
+      className: "border-slate-200 bg-slate-100 text-slate-700",
+      dot: "bg-slate-500",
+    },
     RESERVADO: {
       label: "Reservado",
       className: "border-amber-200 bg-amber-100 text-amber-800",

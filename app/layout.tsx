@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "./providers";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import WatsonAssistantChat from "@/components/WatsonAssistantChat";
 
 export const metadata: Metadata = {
   title: "ReUse! | Doe, troque, reutilize",
@@ -125,6 +126,8 @@ export default async function RootLayout({
               </div>
             </div>
           </footer>
+
+          <WatsonAssistantChat />
         </Providers>
       </body>
     </html>

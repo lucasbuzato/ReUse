@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function FormularioCadastro() {
-  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -27,8 +25,7 @@ export default function FormularioCadastro() {
       });
 
       if (res.ok) {
-        router.push("/perfil");
-        router.refresh();
+        window.location.assign("/perfil");
         return;
       }
 
