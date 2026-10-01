@@ -122,7 +122,9 @@ test("entrada por voz valida o microfone, prioriza pt-BR local e limita esperas"
   );
 
   assert.match(source, /function toggleVoiceInput\(\) \{/);
-  assert.match(source, /recognition\.start\(\);/);
+  assert.match(source, /recognition\.start\(audioTrack\);/);
+  assert.match(source, /microphoneStream\.getAudioTracks\(\)\[0\]/);
+  assert.match(source, /start\(audioTrack\?: MediaStreamTrack\): void/);
   assert.match(source, /startTimeout = window\.setTimeout/);
   assert.match(source, /listenTimeout = window\.setTimeout/);
   assert.match(source, /VOICE_LISTEN_TIMEOUT_MS/);
