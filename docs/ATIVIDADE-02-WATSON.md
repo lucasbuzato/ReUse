@@ -7,6 +7,8 @@
 - **Código da branch:** https://github.com/lucasbuzato/ReUse/tree/feat/watson-assistant-voice
 - **Aplicação:** https://reuse-lucasbuzatos-projects.vercel.app
 - **Branch da atividade:** `feat/watson-assistant-voice`
+- **Commit validado em Production:** [`2523d50`](https://github.com/lucasbuzato/ReUse/commit/2523d5040ba4e88777c55351329890c575471ae3)
+- **Ambiente IBM:** Live, publicado e validado em 01/10/2026
 
 ## Resumo executivo
 
@@ -131,7 +133,11 @@ Foram definidos fluxos determinísticos para dúvidas recorrentes:
 
 O Assistant explica a diferença entre disponível, pausado, reservado e doado e informa quando um item aparece no catálogo.
 
-## 6. Privacidade e segurança
+## 6. Entrada por voz em português
+
+O botão de microfone do ReUse usa reconhecimento `pt-BR`, mantém a escuta até o segundo clique e acumula resultados parciais e finais antes do envio. A sessão possui limite de segurança de 60 segundos e tenta retomar a mesma faixa autorizada se o Chrome encerrar a escuta durante uma pausa. O teste real foi aprovado no Google Chrome; o Opera não é o navegador de referência porque pode expor a API e ainda falhar no serviço de reconhecimento.
+
+## 7. Privacidade e segurança
 
 O Assistant orienta a:
 
@@ -225,40 +231,38 @@ npm run build
 
 As validações locais e suas limitações estão detalhadas em `VALIDATION.md`.
 
-## Resultado da CI do PR #3
+## Resultado final da CI do PR #3
 
-A [execução 36080455646](https://github.com/lucasbuzato/ReUse/actions/runs/36080455646), vinculada ao commit [`7bd3057`](https://github.com/lucasbuzato/ReUse/commit/7bd30573010bcacbb9c7cad87fc9f8f1f14febe3), concluiu com `success`:
+A [execução 36799320094](https://github.com/lucasbuzato/ReUse/actions/runs/36799320094), no commit [`2523d50`](https://github.com/lucasbuzato/ReUse/commit/2523d5040ba4e88777c55351329890c575471ae3), terminou com `success` no job [“Lint, tipos e build”](https://github.com/lucasbuzato/ReUse/actions/runs/36799320094/job/110169876904). O deployment da Vercel também concluiu com sucesso.
 
-- PostgreSQL 16 efêmero inicializado e migrations aplicadas;
-- `RUN_DATABASE_TESTS=1`, com 16 testes aprovados, zero falhas e zero pulos;
-- integração real de isolamento entre proprietários, pausa e reativação executada;
-- lint e TypeScript aprovados;
-- build padrão `next build` concluído com Turbopack;
-- job [“Lint, tipos e build”](https://github.com/lucasbuzato/ReUse/actions/runs/36080455646/job/107901029378) aprovado;
-- status Vercel do commit em `success`, com deployment concluído.
+## Resultado final em Production Live — 01/10/2026
 
-A CI usou somente infraestrutura efêmera e valores descartáveis; nenhum banco ou segredo de produção foi utilizado.
+O E2E foi executado contra `https://reuse-lucasbuzatos-projects.vercel.app`, usando o Web Chat e a chave pública do ambiente IBM Live:
+
+- orientação “Como cadastrar um novo item?” respondeu corretamente;
+- sessão anônima e sessão autenticada emitiram JWT RS256 válido;
+- uma conta descartável publicou um anúncio real;
+- cancelamento manteve o anúncio como `DISPONIVEL`;
+- confirmação positiva pausou exatamente um anúncio da proprietária;
+- repetição da pausa retornou que não havia anúncios disponíveis;
+- reativação devolveu o anúncio para `DISPONIVEL`;
+- repetição da reativação retornou que não havia anúncios pausados;
+- uma segunda conta não enxergou nem alterou o anúncio da primeira;
+- o item descartável foi removido e o estado temporário do navegador foi sanitizado;
+- entrada por voz real `pt-BR`, com parada no segundo clique, foi aceita no Google Chrome.
 
 # Configuração e evidência na IBM
 
-As etapas que exigem conta pessoal estão detalhadas em `docs/IBM-WATSON-SETUP.md`:
+Concluído em 01/10/2026:
 
-- criar/abrir o Assistant;
-- importar a extensão;
-- cadastrar a API key;
-- montar as Actions com o catálogo;
-- testar no Preview e no Inspector;
-- publicar uma versão;
-- copiar os três identificadores públicos do Web Chat para a Vercel.
-
-## Evidências a anexar após o acesso IBM
-
-- extensão com três operações importadas;
-- Preview da orientação “Como cadastrar um novo item?”;
-- confirmação e resultado da pausa;
-- Inspector com HTTP 200 e resposta da API, sem exibir tokens;
-- Web Chat incorporado na aplicação;
-- versão publicada e, se disponível, link compartilhável.
+- extensão com três operações configurada;
+- oito Actions disponíveis;
+- quatro callouts usando o `user_payload` privado;
+- segurança do Web Chat ativada;
+- conteúdo publicado no ambiente Live;
+- identificadores Live e chave pública IBM Live aplicados somente em Production;
+- Production reimplantada e validada sem expor tokens, cookies ou chaves;
+- repositório e configuração documentados neste arquivo e em `docs/IBM-WATSON-SETUP.md`.
 
 # Critérios de pronto
 
@@ -273,11 +277,11 @@ As etapas que exigem conta pessoal estão detalhadas em `docs/IBM-WATSON-SETUP.m
 - [x] Integração PostgreSQL real aprovada na CI, sem testes pulados.
 - [x] Build padrão Turbopack aprovado na CI.
 - [x] Branch e pull request próprios para a Atividade 02.
-- [ ] Extensão importada na conta IBM.
-- [ ] Actions montadas e aprovadas no Preview.
-- [ ] Identificadores do Web Chat configurados na Vercel.
-- [ ] Evidências IBM anexadas.
-- [ ] Versão Live publicada.
+- [x] Extensão importada na conta IBM.
+- [x] Actions montadas e aprovadas no Preview e no Live.
+- [x] Identificadores Live do Web Chat configurados em Production na Vercel.
+- [x] Evidências e relatório E2E consolidados sem segredos.
+- [x] Versão Live publicada e validada em Production.
 
 # Referências
 

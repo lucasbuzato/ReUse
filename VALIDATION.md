@@ -250,7 +250,7 @@ Um servidor de produção local isolado foi iniciado com banco inválido e crede
 
 | Cenário | Resultado |
 |---|---|
-| `POST /api/assistant/session` sem login | HTTP `401` |
+| `POST /api/assistant/session` sem login | HTTP `200`, `authenticated: false` e JWT anônimo válido |
 | resumo sem chave da extensão | HTTP `401` |
 | resumo com chave incorreta | HTTP `401` |
 | pausa com token válido, mas sem escopo `items:pause` | HTTP `403` |
@@ -270,11 +270,40 @@ Playwright confirmou em `http://127.0.0.1:3010/login`:
 - [x] zero `pageerror`;
 - [x] nenhuma rolagem horizontal.
 
-### 11.4 Validações ainda externas
+### 11.4 Validações externas concluídas
 
-A infraestrutura da pull request já foi validada. Permanecem somente as etapas que dependem da conta IBM:
+- [x] extensão importada e três operações configuradas na IBM;
+- [x] Preview, Inspector e quatro callouts privados aprovados;
+- [x] segurança do Web Chat ativada no Draft e no Live;
+- [x] versão publicada no ambiente Live;
+- [x] widget real com os IDs Live implantado em Production;
+- [x] evidências registradas sem tokens, cookies ou chaves.
 
-- [ ] importação da extensão na IBM;
-- [ ] Preview, Inspector e Publish das Actions;
-- [ ] widget real com os IDs do Web Chat;
-- [ ] evidências visuais da conta IBM, sempre com tokens e chaves ocultos.
+## 12. Validação final IBM Live — 01/10/2026
+
+### 12.1 Infraestrutura
+
+- **Commit:** `2523d5040ba4e88777c55351329890c575471ae3`;
+- **CI:** execução `36799320094`, job `110169876904`, conclusão `success`;
+- **Production:** `https://reuse-lucasbuzatos-projects.vercel.app`;
+- [x] bundle público contém o `integrationID` Live e não contém o ID Draft;
+- [x] `POST /api/assistant/session` retorna HTTP `200` e JWT de três segmentos;
+- [x] chave pública IBM Live validada como RSA 2048 bits;
+- [x] chave Live confirmada como diferente da chave Draft;
+- [x] deploy Production concluído com o commit validado.
+
+### 12.2 E2E real em Production
+
+| Cenário | Resultado |
+|---|---|
+| Orientação de cadastro | resposta correta com cinco passos |
+| Cancelamento da pausa | nenhum anúncio alterado |
+| Pausa confirmada | um anúncio mudou para `PAUSADO` |
+| Pausa repetida | nenhum anúncio disponível, sem erro |
+| Reativação confirmada | um anúncio voltou a `DISPONIVEL` |
+| Reativação repetida | nenhum anúncio pausado, sem erro |
+| Segunda conta | nenhum anúncio da proprietária exposto |
+| Estado final | anúncio restaurado e item de teste removido |
+| Voz `pt-BR` | captura real no Chrome, frase completa e envio no segundo clique |
+
+O teste usou contas e um item descartáveis. O item foi excluído ao final e o arquivo temporário de estado do navegador foi sobrescrito com um estado vazio. Nenhum segredo foi impresso ou anexado.

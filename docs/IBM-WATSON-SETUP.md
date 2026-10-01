@@ -2,6 +2,15 @@
 
 Este guia fecha somente as etapas que dependem da conta IBM. Todo o código, a API, o loader do Web Chat, a especificação OpenAPI e o catálogo das Actions já ficam versionados no repositório.
 
+## Status final — 01/10/2026
+
+- Assistant publicado no ambiente **Live**;
+- Web Chat Live com segurança ativada;
+- chave pública IBM Live validada como RSA 2048 bits e armazenada fora do repositório;
+- identificadores e chave Live aplicados somente ao ambiente Production da Vercel;
+- deploy Production e E2E autenticado concluídos;
+- nenhum token, cookie, chave privada ou valor secreto registrado neste guia.
+
 ## Artefatos prontos
 
 | Artefato | Caminho | Uso |
