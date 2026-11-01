@@ -1,251 +1,207 @@
-# ReUse! — catálogo e interesses em Next.js
+# ReUse! — troca e doação de itens
 
-Aplicação acadêmica da **FIAP ON** para a Fase 6. A área escolhida da plataforma ReUse foi o **catálogo e os detalhes de itens**, com foco no fluxo de manifestação e acompanhamento de interesses entre visitantes e doadores.
+Projeto acadêmico da **FIAP ON**. O ReUse! liga quem quer doar um objeto a quem pode reutilizá-lo.
+A pessoa anuncia o item, outras pessoas demonstram interesse e o dono escolhe para quem entregar.
 
-## Links da entrega
+## Links da entrega (fase final)
 
-- **Repositório público:** https://github.com/lucasbuzato/ReUse
-- **Aplicação hospedada:** https://reuse-lucasbuzatos-projects.vercel.app
-- **Atividade 02 — IBM watsonx Assistant:** [`docs/ATIVIDADE-02-WATSON.md`](./docs/ATIVIDADE-02-WATSON.md)
-- **PDF final da Atividade 02:** [`docs/Atividade-02-ReUse-Watson.pdf`](./docs/Atividade-02-ReUse-Watson.pdf)
-- **Configuração da conta IBM:** [`docs/IBM-WATSON-SETUP.md`](./docs/IBM-WATSON-SETUP.md)
-- **OpenAPI importável:** [`watson/reuse-assistant-extension.openapi.json`](./watson/reuse-assistant-extension.openapi.json)
+| O quê | Link |
+| --- | --- |
+| Site (frontend Next.js) | https://reuse-alpha.vercel.app |
+| API (backend Node.js) | https://reuse-api-lucasbuzatos-projects.vercel.app |
+| Documentação da API (OpenAPI) | https://reuse-api-lucasbuzatos-projects.vercel.app/api/docs |
+| Área administrativa low-code (AdminJS) | https://reuse-api-lucasbuzatos-projects.vercel.app/admin |
+| Saúde da API | https://reuse-api-lucasbuzatos-projects.vercel.app/health |
 
-> Ambiente público hospedado na Vercel, com PostgreSQL Neon e variáveis de produção configuradas.
+As contas de demonstração e de avaliação estão no PDF de entrega. Elas não ficam no repositório.
 
-## Área desenvolvida
+## O que cada fase entregou
 
-A entrega potencializa o caminho principal da ReUse:
+| Fase | Entrega | Onde está |
+| --- | --- | --- |
+| 4 — Marketing digital | Rastreamento de campanhas com UTM (primeiro toque). A origem fica salva no cadastro e aparece no painel. | `lib/utm.ts`, `POST /api/users`, painel `/admin` |
+| 5 — Full Stack | Frontend Next.js separado do backend Node.js com Prisma e PostgreSQL. | raiz do repositório e `backend/` |
+| 6 — ChatBot e low code | Assistente IBM watsonx com ações seguras e área administrativa feita com AdminJS. | `watson/`, `backend/src/routes/assistant.ts`, `backend/src/admin/` |
 
-1. explorar itens disponíveis;
-2. buscar por título, descrição ou cidade;
-3. consultar detalhes do item e do doador;
-4. autenticar-se e enviar uma mensagem de interesse;
-5. receber confirmação imediata após o envio;
-6. permitir que o proprietário acompanhe novos interessados sem recarregar a página.
+## Arquitetura
 
-O objetivo é reduzir o atrito entre quem deseja doar e quem pode reutilizar um objeto, preservando a privacidade dos participantes.
+```text
+Navegador
+   │
+   ▼
+reuse-alpha.vercel.app ─ Next.js 16 (App Router, SSR)
+   │  páginas: o servidor do Next chama a API e repassa só o cookie de sessão
+   │  /api/*: reescrito para a API (o navegador fala com um só domínio)
+   ▼
+reuse-api ─ Node.js + Express + TypeScript
+   ├─ /api/*     API REST (itens, interesses, contas, categorias, estatísticas, assistente)
+   ├─ /api/docs  documentação OpenAPI
+   └─ /admin     AdminJS (low code) com perfis ADMIN e VIEWER
+   │
+   ▼
+PostgreSQL (Neon) via Prisma ORM
 
-## Conteúdos do Capítulo 4 aplicados
+IBM watsonx Assistant ──► /api/assistant/actions/* (chave de API + token assinado)
+```
 
-### Route Handler contextual
+Por que separar em dois projetos:
 
-O endpoint `app/api/items/[id]/interests/route.ts` oferece:
-
-- `GET`: retorna dados diferentes para proprietário, visitante autenticado e pessoa anônima;
-- `POST`: valida autenticação, disponibilidade do item, autoria, tamanho da mensagem e duplicidade;
-- respostas privadas sem cache compartilhado (`Cache-Control: private, no-store`).
-
-### SWR
-
-O componente `ItemInterestPanel` usa SWR para:
-
-- aproveitar os dados iniciais renderizados no servidor;
-- revalidar ao recuperar foco;
-- preservar o último resultado durante uma falha temporária;
-- atualizar o painel do proprietário a cada **5 segundos**;
-- disparar atualização manual quando necessário.
-
-A experiência chamada de “tempo real” nesta entrega é implementada por **polling/revalidação periódica**, não por WebSocket.
-
-### React Hook Form
-
-O formulário de interesse utiliza React Hook Form para:
-
-- validação reativa de preenchimento;
-- mínimo de 10 e máximo de 500 caracteres;
-- contador da mensagem;
-- estados de envio, sucesso, falha de API e falha de conexão;
-- bloqueio do botão enquanto os dados são inválidos ou estão sendo enviados.
-
-### Mutação e revalidação
-
-Depois do `POST`, o retorno da API atualiza imediatamente o cache do visitante com `mutate(payload, { revalidate: false })`. Em seguida, uma revalidação em segundo plano confirma o estado persistido no PostgreSQL. O proprietário recebe o novo interesse no próximo ciclo de 5 segundos, sem reload da página.
-
-## Funcionalidades
-
-| Área | Funcionalidades principais |
-|---|---|
-| Catálogo | listagem de itens disponíveis, filtro por categoria, busca textual e estado vazio contextual |
-| Detalhes | imagem ou fallback, categoria, conservação, localização, status e informações do doador |
-| Interesse | formulário validado, feedback imediato, prevenção de duplicidade e confirmação persistida |
-| Painel do proprietário | contagem, nome, e-mail, mensagem, horário, atualização manual e atualização automática |
-| Autenticação | cadastro, login, sessão assinada em cookie HTTP-only e logout |
-| Anúncio | criação de item e gerenciamento de status pelo proprietário |
-| Resiliência | loading skeleton, error boundary, preservação de dados no erro de revalidação e mensagens de conexão |
-| Assistente IBM | Web Chat, orientações determinísticas e automações seguras para consultar, pausar e reativar anúncios |
-
-## Privacidade e regras por papel
-
-- **Pessoa anônima:** recebe somente a contagem total e um convite para login.
-- **Visitante autenticado:** recebe apenas o próprio interesse, nunca os dados de outros interessados.
-- **Proprietário:** recebe a lista completa de interessados do próprio item, incluindo o e-mail necessário para contato.
-- O proprietário não pode demonstrar interesse no próprio item.
-- Um usuário não pode registrar dois interesses no mesmo item.
-- Itens pausados, reservados ou doados não aceitam novos interesses.
-- Alteração de status e exclusão exigem que a sessão pertença ao proprietário.
-
-## UX e acessibilidade
-
-- layout responsivo para celular, tablet e desktop;
-- navegação principal identificada semanticamente;
-- labels associados aos campos, autocomplete e nomes de controles;
-- foco visível e áreas de toque com pelo menos 44 px nos principais controles;
-- regiões de status e erro anunciadas por tecnologias assistivas;
-- suporte a `prefers-reduced-motion`;
-- estados de loading, vazio, erro, sucesso, anônimo e indisponível;
-- nenhuma rolagem horizontal nas larguras testadas.
+- o frontend e o backend têm deploy, variáveis e logs próprios;
+- a API pode atender outros clientes (assistente IBM, painel, app móvel no futuro);
+- o painel AdminJS fica no backend, perto do banco, sem pesar no site.
 
 ## Tecnologias
 
-- **Next.js 16.3** — App Router, Server Components e Route Handlers;
-- **React 18.3**;
-- **TypeScript**;
-- **SWR 2.5**;
-- **React Hook Form 7.88**;
-- **Prisma ORM 5.22**;
-- **PostgreSQL (Neon)** — banco gerenciado conectado pela Vercel;
-- **Tailwind CSS 3.4**;
-- **ESLint 9** com regras do Next.js;
-- **IBM watsonx Assistant** — Actions, Web Chat e extensão customizada OpenAPI 3.0.
+- **Frontend:** Next.js 16, React 18, Tailwind CSS 3, SWR, React Hook Form.
+- **Backend:** Node.js 20+, Express 4, TypeScript (ESM), Prisma 5, PostgreSQL.
+- **Low code:** AdminJS 7 com adaptador Prisma, tema e textos em português.
+- **ChatBot:** IBM watsonx Assistant (Web Chat + extensão OpenAPI).
+- **Hospedagem gratuita:** Vercel (dois projetos) e Neon (PostgreSQL).
 
-## Rotas principais
-
-| Rota | Responsabilidade |
-|---|---|
-| `/` | apresentação da plataforma e indicadores |
-| `/itens` | catálogo, categorias e busca |
-| `/itens/[id]` | detalhes, interesse e painel do proprietário |
-| `/itens/novo` | criação de anúncio autenticada |
-| `/cadastro` | criação de conta |
-| `/login` | autenticação |
-| `/perfil` | dados da conta e anúncios do usuário |
-| `/api/items/[id]/interests` | leitura por papel e criação de interesse |
-| `/api/assistant/session` | token curto da conta conectada para o Web Chat |
-| `/api/assistant/actions/items/summary` | resumo dos anúncios do proprietário |
-| `/api/assistant/actions/items/pause` | pausa em lote dos anúncios disponíveis do proprietário |
-| `/api/assistant/actions/items/reactivate` | reativação em lote dos anúncios pausados do proprietário |
-
-As rotas legadas `/api/interests` e o componente `FormularioInteresse` foram mantidos para preservar compatibilidade com a versão anterior.
-
-## Arquitetura resumida
+## Estrutura de pastas
 
 ```text
-Server Component de detalhes
-        │
-        ├── Prisma/PostgreSQL: item + dados iniciais permitidos para o papel
-        │
-        └── ItemInterestPanel (Client Component)
-                │
-                ├── SWR GET /api/items/[id]/interests
-                ├── React Hook Form
-                └── POST + mutate local + revalidação
+app/                 páginas do site (Next.js App Router)
+components/          componentes do site (site/, ui/ e formulários)
+lib/                 cliente da API, UTM, formatação e metadados
+tests/               testes do frontend (node:test)
+backend/
+├── src/app.ts       app Express (a Vercel usa este arquivo como função)
+├── src/local.ts     servidor HTTP para rodar localmente
+├── src/routes/      rotas da API
+├── src/admin/       AdminJS: recursos, ações, painel e componentes
+├── src/docs/        especificação OpenAPI
+├── prisma/          schema, migrations e seed de demonstração
+├── scripts/         bundle do AdminJS e criação de contas do painel
+└── tests/           testes da API (node:test, com banco real)
+watson/              ações e OpenAPI da extensão do IBM watsonx Assistant
 ```
 
-## Como executar localmente
+## API REST
 
-### Pré-requisitos
+| Método e rota | Uso |
+| --- | --- |
+| `GET /api/items` | Lista itens (busca `q`, `category`, `status`, `limit`). |
+| `GET /api/items/:id` | Detalhe do item. |
+| `POST /api/items` | Publica item (precisa de sessão). |
+| `PATCH /api/items/:id` · `DELETE /api/items/:id` | Dono altera status ou remove. |
+| `GET /api/items/:id/interests` · `POST /api/items/:id/interests` | Painel de interessados e envio de interesse. |
+| `POST /api/users` · `POST /api/users/login` · `POST /api/users/logout` | Cadastro (com UTM), login e saída. |
+| `GET /api/users/me` · `/me/items` · `/me/interests` | Dados da pessoa logada. |
+| `GET /api/categories` · `GET /api/stats` | Categorias e números da plataforma. |
+| `POST /api/assistant/session` · `/api/assistant/actions/*` | Sessão do Web Chat e ações do assistente. |
+| `GET /api/openapi.json` · `GET /api/docs` · `GET /health` | Contrato, documentação e saúde. |
 
-- Node.js 20.9 ou superior;
-- PostgreSQL acessível pela aplicação;
-- npm.
+A sessão usa o cookie `reuse_session` (HTTP-only, assinado com `AUTH_SECRET`).
+Requisições de escrita de origens desconhecidas são bloqueadas.
 
-### 1. Instalar dependências
+## Área administrativa (AdminJS)
+
+- **Painel inicial:** pessoas, itens por status, taxa de doação, categorias, cadastros por origem (UTM) e itens recentes.
+- **Recursos:** Itens, Categorias, Interesses e Pessoas.
+- **Ações próprias:** marcar como doado, pausar e reativar anúncio.
+- **Perfis:** `ADMIN` altera dados. `VIEWER` só consulta e vê e-mails mascarados (conta da banca).
+
+Criar uma conta do painel (o comando pede os dados por variável de ambiente):
+
+```bash
+cd backend
+ADMIN_EMAIL="pessoa@exemplo.com" ADMIN_PASSWORD="senha-forte" ADMIN_NAME="Nome" ADMIN_ROLE="ADMIN" npm run admin:create
+```
+
+## Rastreamento de campanhas (UTM)
+
+1. Um anúncio (Google Ads, Instagram, e-mail) aponta para o site com `utm_source`, `utm_medium` e `utm_campaign`.
+2. O site guarda a **primeira origem** no navegador por 30 dias (`lib/utm.ts`).
+3. No cadastro, a origem vai junto e fica salva na conta.
+4. O painel `/admin` mostra quantos cadastros vieram de cada fonte e campanha.
+
+Exemplo: `https://reuse-alpha.vercel.app/?utm_source=google&utm_medium=cpc&utm_campaign=lancamento_reuse`
+
+## Como rodar localmente
+
+Pré-requisitos: Node.js 20 ou mais novo, npm e um PostgreSQL.
+
+### 1. Backend (porta 4000)
+
+```bash
+cd backend
+npm ci
+cp .env.example .env        # preencha DATABASE_URL e AUTH_SECRET
+npm run prisma:deploy       # cria as tabelas
+npm run prisma:seed         # dados de demonstração
+npm run dev                 # http://localhost:4000 (docs em /api/docs, painel em /admin)
+```
+
+No banco local, o seed usa a senha `reuse-demo-local` em todas as contas `@reuse.example`.
+Fora do banco local, defina `SEED_PASSWORD`.
+
+### 2. Frontend (porta 3000)
 
 ```bash
 npm ci
+npm run dev                 # http://localhost:3000, usa a API em http://localhost:4000
 ```
 
-### 2. Configurar o ambiente
+## Variáveis de ambiente
 
-```bash
-cp .env.example .env
-```
+### Backend (`backend/.env` ou projeto `reuse-api` na Vercel)
 
-Preencha somente no arquivo local:
+| Variável | Obrigatória | Uso |
+| --- | --- | --- |
+| `DATABASE_URL` | sim | Conexão PostgreSQL (Neon em produção). |
+| `AUTH_SECRET` | sim | Assina o cookie de sessão. Use o mesmo valor do frontend antigo para manter as sessões. |
+| `FRONTEND_URL` | produção | URL do site (CORS e links do painel). |
+| `PUBLIC_API_URL` | opcional | URL pública da API (links da documentação e do painel). |
+| `CORS_ORIGINS` | opcional | Outras origens permitidas, separadas por vírgula. |
+| `ASSISTANT_ACTION_SECRET`, `ASSISTANT_EXTENSION_API_KEY` | assistente | Protegem as ações do IBM watsonx Assistant. |
+| `ASSISTANT_WEB_CHAT_PRIVATE_KEY_BASE64`, `ASSISTANT_WEB_CHAT_IBM_PUBLIC_KEY_BASE64` | assistente | Segurança do Web Chat (JWT). |
+| `SEED_PASSWORD` | seed fora do local | Senha das contas de demonstração. |
 
-```env
-DATABASE_URL="postgresql://usuario:senha@host:5432/reuse?schema=public"
-AUTH_SECRET="gere-uma-chave-longa-e-aleatoria"
-ASSISTANT_ACTION_SECRET="outro-segredo-com-pelo-menos-32-caracteres"
-ASSISTANT_EXTENSION_API_KEY="chave-configurada-tambem-na-extensao-IBM"
+### Frontend (raiz ou projeto `reuse` na Vercel)
 
-# Públicos, copiados do snippet de Embed do Web Chat
-NEXT_PUBLIC_IBM_ASSISTANT_INTEGRATION_ID=""
-NEXT_PUBLIC_IBM_ASSISTANT_REGION=""
-NEXT_PUBLIC_IBM_ASSISTANT_SERVICE_INSTANCE_ID=""
-```
+| Variável | Uso |
+| --- | --- |
+| `BACKEND_URL` | URL da API. É lida **no build** (reescrita de `/api/*`). Depois de mudar, faça novo deploy. |
+| `NEXT_PUBLIC_SITE_URL` | URL pública do site (metadados e sitemap). Opcional. |
+| `NEXT_PUBLIC_IBM_ASSISTANT_*` | Dados públicos do Web Chat do IBM watsonx Assistant. |
 
-Não publique `.env` nem credenciais reais.
+Nunca publique arquivos `.env` nem credenciais reais.
 
-### 3. Preparar o banco
+## Deploy na Vercel (plano gratuito)
 
-```bash
-npm run prisma:generate
-npm run prisma:deploy
-npm run prisma:seed
-```
+São dois projetos ligados ao mesmo repositório:
 
-O seed cria duas contas exclusivamente para demonstração local:
+| Projeto | Pasta raiz | Build |
+| --- | --- | --- |
+| `reuse-api` | `backend` | `npm run build` (Prisma Client, tipos e bundle do AdminJS) |
+| `reuse` | raiz | `npm run build` (Next.js) |
 
-```text
-maria@exemplo.com / 123456
-joao@exemplo.com  / 123456
-```
+Ordem do primeiro deploy:
 
-### 4. Iniciar
-
-```bash
-npm run dev
-```
-
-Acesse http://localhost:3000.
+1. Criar o projeto `reuse-api` com pasta raiz `backend` e configurar as variáveis do backend.
+2. Aplicar as migrations no banco de produção: `cd backend && npm run prisma:deploy`.
+3. Rodar o seed com `SEED_PASSWORD` e criar as contas do painel com `npm run admin:create`.
+4. Conferir `/health`, `/api/docs` e `/admin` na URL da API.
+5. No projeto `reuse`, definir `BACKEND_URL` com a URL da API e fazer novo deploy.
 
 ## Qualidade
 
 ```bash
-npm test           # testes de segurança, domínio e artefatos Watson
-npm run lint       # ESLint
-npm run typecheck  # TypeScript sem emissão
-npm run build      # build de produção
-npm run check      # testes + lint + tipos + build
+# frontend (raiz)
+npm run check               # testes + lint + tipos + build
+
+# backend
+cd backend
+npm run typecheck
+RUN_DATABASE_TESTS=1 npm test   # inclui testes com banco real
 ```
 
+O GitHub Actions (`.github/workflows/ci.yml`) roda os dois conjuntos em cada push e pull request:
+o backend com um PostgreSQL de teste e o frontend com testes, lint, tipos e build.
 
-## Estrutura relevante
+## Documentos das fases anteriores
 
-```text
-app/
-├── api/
-│   ├── interests/                    # compatibilidade legada
-│   ├── items/
-│   │   └── [id]/interests/route.ts   # GET e POST da entrega
-│   └── users/
-├── itens/
-│   ├── [id]/page.tsx
-│   ├── error.tsx
-│   ├── loading.tsx
-│   └── page.tsx
-└── providers.tsx                     # SWRConfig
-components/
-└── ItemInterestPanel.tsx
-lib/
-├── auth.ts
-├── interest-types.ts
-└── prisma.ts
-prisma/
-├── migrations/
-├── schema.prisma
-└── seed.js
-```
-
-## Banco de dados
-
-O modelo mantém quatro entidades principais:
-
-- `users` — contas de doadores e interessados;
-- `categories` — categorias dos anúncios;
-- `items` — itens publicados;
-- `interests` — mensagens de interesse.
-
-A chave única composta `interests(userId, itemId)` garante a regra de uma manifestação por usuário e item. A exclusão de um item remove seus interesses em cascata.
+- Atividade 02 — IBM watsonx Assistant: [`docs/ATIVIDADE-02-WATSON.md`](./docs/ATIVIDADE-02-WATSON.md)
+- Configuração da conta IBM: [`docs/IBM-WATSON-SETUP.md`](./docs/IBM-WATSON-SETUP.md)
+- OpenAPI da extensão: [`watson/reuse-assistant-extension.openapi.json`](./watson/reuse-assistant-extension.openapi.json)
