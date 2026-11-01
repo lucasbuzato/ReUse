@@ -5,23 +5,75 @@
       "root": ".",
       "framework": "nextjs",
       "buildCommand": "npm run build",
-      "bindings": [{ "type": "service", "service": "api", "format": "url", "env": "BACKEND_URL" }]
+      "bindings": [
+        {
+          "type": "service",
+          "service": "api",
+          "format": "url",
+          "env": "BACKEND_URL"
+        }
+      ]
     },
     "api": {
       "root": "backend",
       "framework": "express",
       "entrypoint": "src/app.ts",
-      "buildCommand": "npm run build"
+      "buildCommand": "npm run build",
+      "functions": {
+        "src/app.ts": {
+          "includeFiles": "backend/{node_modules/@rollup/rollup-linux-x64-gnu,public}/**"
+        }
+      }
     }
   },
   "rewrites": [
-    { "source": "/api", "destination": { "service": "api" } },
-    { "source": "/api/(.*)", "destination": { "service": "api" } },
-    { "source": "/admin", "destination": { "service": "api" } },
-    { "source": "/admin/(.*)", "destination": { "service": "api" } },
-    { "source": "/admin-assets/(.*)", "destination": { "service": "api" } },
-    { "source": "/brand/(.*)", "destination": { "service": "api" } },
-    { "source": "/health", "destination": { "service": "api" } },
-    { "source": "/(.*)", "destination": { "service": "web" } }
+    {
+      "source": "/api",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/admin",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/admin/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/admin-assets/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/brand/(.*)",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/health",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "web"
+      }
+    }
   ]
 }

@@ -27,12 +27,10 @@ app.use((_req, res, next) => {
   next();
 });
 
-// Fora da Vercel (dev local / Render) os arquivos de public/ são servidos pelo Express.
-// Na Vercel, public/** é servido pela CDN e express.static é ignorado.
-if (!config.isVercel) {
-  const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../public");
-  app.use(express.static(publicDir, { maxAge: config.isProduction ? "1h" : 0 }));
-}
+// Arquivos de public/ (bundle do painel AdminJS e marca). Na Vercel eles vão
+// junto com a função (includeFiles no vercel.json) e também são servidos aqui.
+const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../public");
+app.use(express.static(publicDir, { maxAge: config.isProduction ? "1h" : 0 }));
 
 // Área administrativa low-code (AdminJS). Precisa vir antes dos parsers de corpo.
 app.use("/admin", adminMiddleware);
