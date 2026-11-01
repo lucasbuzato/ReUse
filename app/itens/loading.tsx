@@ -4,7 +4,7 @@ export default function LoadingItems() {
       <div className="h-4 w-24 animate-pulse rounded bg-soft" />
       <div className="mt-4 h-12 w-full max-w-lg animate-pulse rounded-lg bg-soft" />
       <div className="mt-8 h-12 w-full animate-pulse rounded-lg bg-soft" />
-      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: 8 }).map((_, index) => (
           <div key={index} className="overflow-hidden rounded-xl border border-line bg-surface">
             <div className="aspect-[4/3] animate-pulse bg-soft" />

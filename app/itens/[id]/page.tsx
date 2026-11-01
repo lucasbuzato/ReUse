@@ -6,7 +6,7 @@ import ItemInterestPanel from "@/components/ItemInterestPanel";
 import ItemCard from "@/components/ui/ItemCard";
 import ItemImage from "@/components/ui/ItemImage";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { ArrowLeftIcon, CheckIcon, HeartIcon, PinIcon } from "@/components/ui/Icons";
+import { ArrowLeftIcon, CheckIcon, HeartIcon, PinIcon, ShieldIcon } from "@/components/ui/Icons";
 import { getCurrentUser, getInterestPanel, getItem, getItems } from "@/lib/api";
 import { formatDate, plural, timeAgo } from "@/lib/format";
 import type { InterestPanelData } from "@/lib/interest-types";
@@ -37,6 +37,22 @@ async function loadInterestPanel(item: Item): Promise<InterestPanelData> {
   } catch {
     return { role: "anonymous", total: item._count.interests, interests: [], ownInterest: null };
   }
+}
+
+function SafetyTips({ className = "" }: { className?: string }) {
+  return (
+    <section aria-labelledby="seguranca-titulo" className={`rounded-xl border border-line bg-surface p-5 ${className}`}>
+      <h2 id="seguranca-titulo" className="flex items-center gap-2 font-semibold">
+        <ShieldIcon className="h-5 w-5 text-brand-text" />
+        Combine com segurança
+      </h2>
+      <ul className="mt-3 space-y-2 text-sm text-muted">
+        <li>Marque a entrega em um local público e movimentado.</li>
+        <li>Confira o item antes de levar para casa.</li>
+        <li>O ReUse! não cobra taxas. Desconfie de pedidos de pagamento.</li>
+      </ul>
+    </section>
+  );
 }
 
 export default async function ItemDetailPage({ params, searchParams }: Props) {
@@ -77,6 +93,7 @@ export default async function ItemDetailPage({ params, searchParams }: Props) {
           <div className="aspect-[4/3] overflow-hidden rounded-xl border border-line bg-soft">
             <ItemImage src={item.imageUrl} alt={item.title} priority />
           </div>
+          {!isOwner ? <SafetyTips className="mt-6 hidden lg:block" /> : null}
         </div>
 
         <div>
@@ -89,7 +106,7 @@ export default async function ItemDetailPage({ params, searchParams }: Props) {
 
           <h1 className="mt-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{item.title}</h1>
 
-          <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
+          <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line">
             {[
               { label: "Conservação", value: item.condition },
               { label: "Cidade", value: item.owner.city ?? "Não informada" },
@@ -156,6 +173,8 @@ export default async function ItemDetailPage({ params, searchParams }: Props) {
               {plural(item._count.interests, "pessoa já demonstrou interesse", "pessoas já demonstraram interesse")}
             </p>
           ) : null}
+
+          {!isOwner ? <SafetyTips className="mt-6 lg:hidden" /> : null}
         </div>
       </div>
 
@@ -170,7 +189,7 @@ export default async function ItemDetailPage({ params, searchParams }: Props) {
           <h2 id="relacionados-titulo" className="text-2xl font-bold tracking-tight">
             Mais em {item.category.name}
           </h2>
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             {relatedItems.map((entry) => (
               <ItemCard key={entry.id} item={entry} />
             ))}

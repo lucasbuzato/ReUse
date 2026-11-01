@@ -153,7 +153,7 @@ function CategoryGrid({ categories }: { categories: Category[] }) {
           Ver todos os itens <ArrowRightIcon />
         </Link>
       </div>
-      <ul className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+      <ul className="mt-8 grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {categories.map((category) => {
           const photo = categoryPhoto(category.name);
           return (
@@ -283,7 +283,7 @@ export default async function HomePage() {
                 <ArrowRightIcon />
               </Link>
             </div>
-            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
               {latest.slice(0, 8).map((item) => (
                 <ItemCard key={item.id} item={item} />
               ))}

@@ -30,12 +30,12 @@ export default function Header({ user }: { user: CurrentUser | null }) {
         <div className="hidden items-center gap-2 md:flex">
           {user ? (
             <>
-              <Link href="/itens/novo" className="btn-primary !min-h-10 !px-4">
+              <Link href="/itens/novo" className="btn-primary !px-4">
                 Anunciar item
               </Link>
               <Link
                 href="/perfil"
-                className="flex min-h-10 items-center gap-2 rounded-lg border border-line bg-surface py-1.5 pl-1.5 pr-3 text-sm font-semibold text-ink hover:border-brand"
+                className="flex min-h-11 items-center gap-2 rounded-lg border border-line bg-surface py-1.5 pl-1.5 pr-3 text-sm font-semibold text-ink hover:border-brand"
                 aria-label={`Meu perfil (${user.name})`}
               >
                 <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-xs font-bold text-brand-on" aria-hidden="true">
@@ -46,17 +46,17 @@ export default function Header({ user }: { user: CurrentUser | null }) {
             </>
           ) : (
             <>
-              <Link href="/login" className="btn-ghost !min-h-10">
+              <Link href="/login" className="btn-ghost">
                 Entrar
               </Link>
-              <Link href="/cadastro" className="btn-primary !min-h-10 !px-4">
+              <Link href="/cadastro" className="btn-primary !px-4">
                 Criar conta grátis
               </Link>
             </>
           )}
         </div>
 
-        <MobileMenu links={[...links, { href: "/itens/novo", label: "Anunciar um item" }]} signedIn={Boolean(user)} />
+        <MobileMenu links={user ? links : [...links, { href: "/itens/novo", label: "Anunciar um item" }]} signedIn={Boolean(user)} />
       </div>
     </header>
   );

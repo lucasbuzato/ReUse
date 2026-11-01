@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useForm, useWatch } from "react-hook-form";
 import useSWR from "swr";
 import type { InterestPanelData } from "@/lib/interest-types";
-import { CheckIcon, HeartIcon } from "@/components/ui/Icons";
+import { CheckIcon, HeartIcon, RefreshIcon } from "@/components/ui/Icons";
 
 type FormValues = {
   message: string;
@@ -107,7 +107,7 @@ export default function ItemInterestPanel({
           </div>
 
           <button type="button" onClick={() => void mutate()} disabled={isValidating} className="btn-secondary shrink-0">
-            <span aria-hidden="true">↻</span>
+            <RefreshIcon className={`h-4 w-4 ${isValidating ? "animate-spin" : ""}`} />
             {isValidating ? "Atualizando..." : "Atualizar agora"}
           </button>
         </div>
@@ -175,14 +175,18 @@ export default function ItemInterestPanel({
             <p className="mt-2 text-xs font-medium text-muted">{totalLabel(data.total)}</p>
           </div>
         </div>
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <Link href={`/login?next=${encodeURIComponent(`/itens/${itemId}`)}`} className="btn-primary">
-            Entrar para demonstrar interesse
+        <Link href={`/login?next=${encodeURIComponent(`/itens/${itemId}`)}`} className="btn-primary mt-5 w-full">
+          Entrar para demonstrar interesse
+        </Link>
+        <p className="mt-3 text-center text-sm text-muted">
+          Ainda não tem conta?{" "}
+          <Link
+            href={`/cadastro?next=${encodeURIComponent(`/itens/${itemId}`)}`}
+            className="font-semibold text-brand-text underline-offset-2 hover:underline"
+          >
+            Crie grátis em 1 minuto
           </Link>
-          <Link href={`/cadastro?next=${encodeURIComponent(`/itens/${itemId}`)}`} className="btn-secondary">
-            Criar conta grátis
-          </Link>
-        </div>
+        </p>
       </section>
     );
   }

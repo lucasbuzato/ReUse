@@ -20,14 +20,16 @@ export default function ItemCard({ item, priority = false }: { item: Item; prior
         />
         {item.status !== "DISPONIVEL" ? <StatusBadge status={item.status} className="absolute left-3 top-3" /> : null}
       </div>
-      <div className="flex flex-1 flex-col gap-1.5 p-4">
+      <div className="flex flex-1 flex-col gap-1 p-3 sm:gap-1.5 sm:p-4">
         <div className="flex items-center justify-between gap-3 text-xs">
-          <span className="font-semibold text-brand-text">{item.category.name}</span>
-          <span className="text-muted">{item.condition}</span>
+          <span className="truncate font-semibold text-brand-text">{item.category.name}</span>
+          <span className="hidden shrink-0 text-muted sm:inline">{item.condition}</span>
         </div>
-        <h3 className="line-clamp-2 text-base font-semibold leading-snug text-ink group-hover:text-brand-text">{item.title}</h3>
-        <p className="mt-auto flex items-center gap-1.5 pt-2 text-sm text-muted">
-          <PinIcon className="h-4 w-4 shrink-0" />
+        <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-ink group-hover:text-brand-text sm:text-base">
+          {item.title}
+        </h3>
+        <p className="mt-auto flex items-center gap-1.5 pt-1.5 text-[13px] text-muted sm:pt-2 sm:text-sm">
+          <PinIcon className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
           <span className="truncate">{item.owner.city ?? "Cidade não informada"}</span>
           <span aria-hidden="true">·</span>
           <span className="shrink-0">{timeAgo(item.createdAt)}</span>

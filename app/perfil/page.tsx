@@ -80,12 +80,11 @@ export default async function PerfilPage() {
           <div className="min-w-0">
             <p className="eyebrow">Minha conta</p>
             <h1 className="mt-1 truncate text-3xl font-bold tracking-tight sm:text-4xl">Olá, {firstName}</h1>
-            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+            <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
               <span className="inline-flex items-center gap-1">
                 <PinIcon className="h-3.5 w-3.5" />
                 {user.city ?? "Cidade não informada"}
               </span>
-              <span aria-hidden="true">·</span>
               <span>Membro desde {formatMonthYear(user.createdAt)}</span>
             </p>
           </div>
@@ -193,7 +192,7 @@ export default async function PerfilPage() {
             </Link>
           </EmptyState>
         ) : (
-          <ul className="grid gap-4 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {interests.map((interest) => (
               <li key={interest.id}>
                 <Link

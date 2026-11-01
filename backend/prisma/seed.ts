@@ -44,7 +44,7 @@ const USERS: Array<{ key: string; name: string; city: string; utm: Utm; daysAgo:
   { key: "felipe", name: "Felipe Rocha", city: "Sorocaba", utm: ["linkedin", "paid_social", "semana_sustentavel"], daysAgo: 19 },
   { key: "gabriela", name: "Gabriela Nunes", city: "Osasco", utm: ["whatsapp", "referral", "indique_amigos"], daysAgo: 16 },
   { key: "henrique", name: "Henrique Dias", city: "São Bernardo do Campo", utm: ["tiktok", "paid_social", "lancamento_reuse"], daysAgo: 12 },
-  { key: "demo", name: "Conta Demonstração", city: "São Paulo", utm: ["google", "cpc", "lancamento_reuse"], daysAgo: 9 },
+  { key: "demo", name: "Júlia Martins", city: "São Paulo", utm: ["google", "cpc", "lancamento_reuse"], daysAgo: 9 },
 ];
 
 type Status = "DISPONIVEL" | "RESERVADO" | "DOADO" | "PAUSADO";

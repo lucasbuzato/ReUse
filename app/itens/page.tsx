@@ -35,7 +35,7 @@ export default async function ItemsPage({ searchParams }: Props) {
   };
 
   const chip = (active: boolean) =>
-    `inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${
+    `inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-colors ${
       active ? "border-brand bg-brand text-brand-on" : "border-line bg-surface text-ink hover:border-brand/60"
     }`;
 
@@ -139,7 +139,7 @@ export default async function ItemsPage({ searchParams }: Props) {
             </Link>
           </EmptyState>
         ) : (
-          <section aria-label="Itens disponíveis" className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <section aria-label="Itens disponíveis" className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
             {items.map((item, index) => (
               <ItemCard key={item.id} item={item} priority={index < 4} />
             ))}
