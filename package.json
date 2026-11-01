@@ -1,23 +1,21 @@
 {
   "name": "reuse-web",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": true,
+  "description": "Frontend Next.js do ReUse! — consome a API Node.js (pasta backend/).",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsc -p tsconfig.test.json && node --test .test-dist/tests/assistant-action-token.test.js .test-dist/tests/assistant-web-chat-token.test.js .test-dist/tests/assistant-request-auth.test.js .test-dist/tests/assistant-item-actions.test.js .test-dist/tests/assistant-item-actions.integration.test.js .test-dist/tests/prisma-assistant-item-store.test.js .test-dist/tests/watson-artifacts.test.js",
-    "check": "npm run test && npm run lint && npm run typecheck && npm run build",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
-    "prisma:studio": "prisma studio",
-    "prisma:seed": "node prisma/seed.js"
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"tests/*.test.mjs\"",
+    "check": "npm run test && npm run lint && npm run typecheck && npm run build"
   },
   "dependencies": {
-    "@prisma/client": "^5.19.0",
     "next": "^16.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -32,7 +30,6 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.1",
     "postcss": "^8.4.40",
-    "prisma": "^5.19.0",
     "tailwindcss": "^3.4.7",
     "typescript": "^5.4.5"
   }

@@ -1,132 +1,65 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
-import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import Footer from "@/components/site/Footer";
+import Header from "@/components/site/Header";
+import UtmCapture from "@/components/site/UtmCapture";
 import WatsonAssistantChat from "@/components/WatsonAssistantChat";
+import { getCurrentUser } from "@/lib/api";
+import { siteDescription, siteName, siteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "ReUse! | Doe, troque, reutilize",
-  description:
-    "Plataforma web ReUse! — conectando pessoas para dar uma nova vida aos objetos.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "ReUse! — Doe e troque objetos perto de você",
+    template: "%s · ReUse!",
+  },
+  description: siteDescription,
+  applicationName: siteName,
+  keywords: ["doação", "troca", "economia circular", "reutilizar", "sustentabilidade", "objetos usados"],
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName,
+    url: "/",
+    title: "ReUse! — Doe e troque objetos perto de você",
+    description: siteDescription,
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "ReUse! — doe o que sobra, encontre o que falta" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ReUse! — Doe e troque objetos perto de você",
+    description: siteDescription,
+    images: ["/og.png"],
+  },
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const userId = await getCurrentUser();
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f5ef" },
+    { media: "(prefers-color-scheme: dark)", color: "#101512" },
+  ],
+};
 
-  const user = userId
-    ? await prisma.user.findUnique({
-        where: { id: userId },
-        select: { name: true },
-      })
-    : null;
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
 
   return (
     <html lang="pt-BR">
-      <body className="flex min-h-screen flex-col bg-[#f6faf7]">
+      <body className="flex min-h-screen flex-col bg-canvas font-sans text-ink">
+        <a
+          href="#conteudo"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-4 focus:py-3 focus:font-semibold"
+        >
+          Pular para o conteúdo
+        </a>
         <Providers>
-          <header className="sticky top-0 z-50 border-b border-green-900/10 bg-white/95 backdrop-blur">
-            <nav className="mx-auto max-w-6xl px-4 sm:px-6" aria-label="Principal">
-              <div className="flex h-20 items-center justify-between gap-6">
-                <Link
-                  href="/"
-                  className="group flex shrink-0 items-center gap-2"
-                >
-                  <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-reuse-green text-lg font-bold text-white transition group-hover:rotate-3"
-                    aria-hidden="true"
-                  >
-                    R
-                  </div>
-
-                  <div>
-                    <span className="text-xl font-bold text-reuse-greenDark">
-                      ReUse!
-                    </span>
-                    <p className="hidden text-[10px] uppercase tracking-widest text-gray-400 sm:block">
-                      reutilize • compartilhe • transforme
-                    </p>
-                  </div>
-                </Link>
-
-                <div className="flex items-center gap-2 text-sm font-medium sm:gap-5">
-                  <Link
-                    href="/itens"
-                    className="rounded-lg px-3 py-2 text-gray-600 transition hover:bg-reuse-greenLight hover:text-reuse-greenDark"
-                  >
-                    Explorar
-                  </Link>
-
-                  <Link
-                    href="/itens/novo"
-                    className="hidden rounded-lg px-3 py-2 text-gray-600 transition hover:bg-reuse-greenLight hover:text-reuse-greenDark sm:block"
-                  >
-                    Anunciar
-                  </Link>
-
-                  <Link
-                    href="/perfil"
-                    className="rounded-lg px-3 py-2 text-gray-600 transition hover:bg-reuse-greenLight hover:text-reuse-greenDark"
-                  >
-                    Perfil
-                  </Link>
-
-                  {user ? (
-                    <Link
-                      href="/perfil"
-                      className="hidden items-center gap-2 rounded-xl bg-reuse-greenLight px-3 py-2 md:flex"
-                      aria-label={`Perfil de ${user.name}`}
-                    >
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-reuse-green text-xs font-bold text-white">
-                        {user.name.charAt(0).toUpperCase()}
-                      </div>
-
-                      <span className="text-reuse-greenDark">
-                        {user.name.split(" ")[0]}
-                      </span>
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/login"
-                      className="reuse-button-primary !px-4 !py-2.5"
-                    >
-                      Entrar
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </nav>
-          </header>
-
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+          <Header user={user} />
+          <main id="conteudo" className="flex-1">
             {children}
           </main>
-
-          <footer className="mt-16 border-t border-gray-200 bg-white">
-            <div className="mx-auto max-w-6xl px-6 py-10">
-              <div className="flex flex-col justify-between gap-6 sm:flex-row">
-                <div>
-                  <p className="text-lg font-bold text-reuse-greenDark">
-                    ReUse!
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Dê uma nova vida ao que você não usa mais.
-                  </p>
-                </div>
-
-                <div className="text-sm text-gray-400 sm:text-right">
-                  <p>Projeto acadêmico FIAP ON</p>
-                  <p className="mt-1">Doe • Troque • Reutilize</p>
-                </div>
-              </div>
-            </div>
-          </footer>
-
+          <Footer />
+          <UtmCapture />
           <WatsonAssistantChat />
         </Providers>
       </body>

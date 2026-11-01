@@ -71,7 +71,8 @@ itemsRouter.get(
       take: limit,
     });
 
-    res.set("Cache-Control", "public, max-age=0, s-maxage=15, stale-while-revalidate=60");
+    // Sem cache: um anúncio novo ou pausado precisa refletir no catálogo na hora.
+    res.set("Cache-Control", "no-store");
     res.json(items);
   })
 );

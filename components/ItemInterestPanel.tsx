@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useForm, useWatch } from "react-hook-form";
 import useSWR from "swr";
 import type { InterestPanelData } from "@/lib/interest-types";
+import { CheckIcon, HeartIcon } from "@/components/ui/Icons";
 
 type FormValues = {
   message: string;
@@ -17,6 +18,10 @@ const dateTimeFormat = new Intl.DateTimeFormat("pt-BR", {
 
 function formatDate(value: string) {
   return dateTimeFormat.format(new Date(value));
+}
+
+function totalLabel(total: number) {
+  return total === 1 ? "1 interesse registrado" : `${total} interesses registrados`;
 }
 
 export default function ItemInterestPanel({
@@ -36,22 +41,15 @@ export default function ItemInterestPanel({
   } = useSWR<InterestPanelData>(endpoint, {
     fallbackData: initialData,
     keepPreviousData: true,
-    refreshInterval: (latestData) =>
-      latestData?.role === "owner" ? 5_000 : 0,
+    refreshInterval: (latestData) => (latestData?.role === "owner" ? 5_000 : 0),
   });
 
   const form = useForm<FormValues>({
     mode: "onChange",
-    defaultValues: {
-      message: "",
-    },
+    defaultValues: { message: "" },
   });
 
-  const message = useWatch({
-    control: form.control,
-    name: "message",
-    defaultValue: "",
-  });
+  const message = useWatch({ control: form.control, name: "message", defaultValue: "" });
 
   async function onSubmit(values: FormValues) {
     form.clearErrors("root");
@@ -59,18 +57,14 @@ export default function ItemInterestPanel({
     try {
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
 
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
-        form.setError("root", {
-          message: payload?.error ?? "Não foi possível enviar seu interesse.",
-        });
+        form.setError("root", { message: payload?.error ?? "Não foi possível enviar seu interesse." });
         return;
       }
 
@@ -78,59 +72,41 @@ export default function ItemInterestPanel({
       form.reset();
       void mutate();
     } catch {
-      form.setError("root", {
-        message: "Erro de conexão. Verifique sua internet e tente novamente.",
-      });
+      form.setError("root", { message: "Erro de conexão. Verifique sua internet e tente novamente." });
     }
   }
 
   if (isLoading && !data) {
     return (
-      <section
-        className="mt-7 rounded-2xl border border-gray-100 bg-white p-6"
-        aria-busy="true"
-        aria-label="Carregando interesses"
-      >
-        <div className="h-5 w-48 animate-pulse rounded bg-gray-100" />
-        <div className="mt-4 h-20 animate-pulse rounded-xl bg-gray-50" />
+      <section className="rounded-xl border border-line bg-surface p-6" aria-busy="true" aria-label="Carregando interesses">
+        <div className="h-5 w-48 animate-pulse rounded bg-soft" />
+        <div className="mt-4 h-20 animate-pulse rounded-lg bg-soft" />
       </section>
     );
   }
 
   if (data.role === "owner") {
     return (
-      <section
-        className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8"
-        aria-labelledby="interests-title"
-      >
+      <section className="rounded-xl border border-line bg-surface p-6 sm:p-8" aria-labelledby="interests-title">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <span
-                className="h-2.5 w-2.5 rounded-full bg-green-500"
-                aria-hidden="true"
-              />
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-reuse-green">
-                Sincronização em tempo real
-              </p>
-            </div>
-            <h2 id="interests-title" className="mt-2 text-2xl font-bold text-gray-900">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-text">
+              <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-40" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand" />
+              </span>
+              Atualização automática
+            </p>
+            <h2 id="interests-title" className="mt-2 text-2xl font-bold tracking-tight">
               Pessoas interessadas
             </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              {data.total === 1
-                ? "1 pessoa demonstrou interesse"
-                : `${data.total} pessoas demonstraram interesse`}
-              . A lista é revalidada automaticamente a cada 5 segundos.
+            <p className="mt-1 text-sm text-muted">
+              {data.total === 1 ? "1 pessoa demonstrou interesse" : `${data.total} pessoas demonstraram interesse`}. A lista se
+              atualiza a cada 5 segundos.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void mutate()}
-            disabled={isValidating}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-reuse-green hover:text-reuse-green focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-reuse-green focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
-          >
+          <button type="button" onClick={() => void mutate()} disabled={isValidating} className="btn-secondary shrink-0">
             <span aria-hidden="true">↻</span>
             {isValidating ? "Atualizando..." : "Atualizar agora"}
           </button>
@@ -140,54 +116,40 @@ export default function ItemInterestPanel({
           {isValidating ? "Atualizando a lista de interessados." : "Lista atualizada."}
         </p>
 
-        {error && (
-          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4" role="alert">
-            <p className="text-sm text-amber-900">
-              Não foi possível sincronizar agora. Os últimos dados carregados continuam visíveis.
-            </p>
+        {error ? (
+          <div className="mt-5 rounded-lg border border-warn/30 bg-warn-soft p-4" role="alert">
+            <p className="text-sm text-warn">Não foi possível sincronizar agora. Os últimos dados carregados continuam visíveis.</p>
           </div>
-        )}
+        ) : null}
 
         {data.interests.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-dashed border-gray-200 px-6 py-12 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-reuse-greenLight text-2xl" aria-hidden="true">
-              💬
-            </div>
-            <p className="mt-4 font-semibold text-gray-700">Ainda não há interessados</p>
-            <p className="mt-1 text-sm text-gray-500">
-              Quando alguém enviar uma mensagem, ela aparecerá aqui sem recarregar a página.
-            </p>
+          <div className="mt-6 rounded-lg border border-dashed border-field/60 px-6 py-10 text-center">
+            <p className="font-semibold">Ainda não há interessados</p>
+            <p className="mt-1 text-sm text-muted">Quando alguém enviar uma mensagem, ela aparece aqui sem recarregar a página.</p>
           </div>
         ) : (
           <ul className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
             {data.interests.map((interest) => (
-              <li
-                key={interest.id}
-                className="rounded-2xl border border-gray-100 p-5 transition hover:border-green-200 hover:shadow-sm"
-              >
+              <li key={interest.id} className="rounded-lg border border-line p-5">
                 <div className="flex items-start gap-3">
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-reuse-greenLight font-bold text-reuse-greenDark"
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft font-bold text-brand-text"
                     aria-hidden="true"
                   >
                     {interest.user.name.charAt(0).toUpperCase()}
-                  </div>
+                  </span>
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-800">{interest.user.name}</p>
+                    <p className="font-semibold">{interest.user.name}</p>
                     <a
                       href={`mailto:${interest.user.email}`}
-                      className="block truncate text-sm text-reuse-green underline-offset-4 hover:underline"
+                      className="block truncate text-sm text-brand-text underline-offset-4 hover:underline"
                     >
                       {interest.user.email}
                     </a>
-                    <p className="mt-1 text-xs text-gray-400">
-                      Recebido em {formatDate(interest.createdAt)}
-                    </p>
+                    <p className="mt-1 text-xs text-muted">Recebido em {formatDate(interest.createdAt)}</p>
                   </div>
                 </div>
-                <blockquote className="mt-4 rounded-xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
-                  “{interest.message}”
-                </blockquote>
+                <blockquote className="mt-4 rounded-lg bg-soft p-4 text-sm text-ink">“{interest.message}”</blockquote>
               </li>
             ))}
           </ul>
@@ -198,120 +160,117 @@ export default function ItemInterestPanel({
 
   if (data.role === "anonymous") {
     return (
-      <section className="mt-7 rounded-2xl border border-green-100 bg-green-50/60 p-6" aria-labelledby="interest-cta-title">
+      <section className="rounded-xl border border-brand/25 bg-brand-soft/60 p-6" aria-labelledby="interest-cta-title">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-100" aria-hidden="true">
-            💚
-          </div>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface text-brand-text" aria-hidden="true">
+            <HeartIcon className="h-5 w-5" />
+          </span>
           <div>
-            <h2 id="interest-cta-title" className="font-bold text-gray-900">Quero este item</h2>
-            <p className="mt-1 text-sm leading-6 text-gray-600">
-              Entre na sua conta para enviar uma mensagem ao doador. Somente ele verá seus dados de contato.
+            <h2 id="interest-cta-title" className="font-semibold">
+              Quero este item
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Entre na sua conta para enviar uma mensagem a quem anunciou. Só essa pessoa verá seu contato.
             </p>
-            <p className="mt-2 text-xs font-medium text-gray-500">
-              {data.total === 1 ? "1 interesse registrado" : `${data.total} interesses registrados`}
-            </p>
+            <p className="mt-2 text-xs font-medium text-muted">{totalLabel(data.total)}</p>
           </div>
         </div>
-        <Link href="/login" className="reuse-button-primary mt-5 w-full sm:w-auto">
-          Entrar para demonstrar interesse
-        </Link>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <Link href={`/login?next=${encodeURIComponent(`/itens/${itemId}`)}`} className="btn-primary">
+            Entrar para demonstrar interesse
+          </Link>
+          <Link href={`/cadastro?next=${encodeURIComponent(`/itens/${itemId}`)}`} className="btn-secondary">
+            Criar conta grátis
+          </Link>
+        </div>
       </section>
     );
   }
 
   if (data.ownInterest) {
     return (
-      <section className="mt-7 rounded-2xl border border-green-200 bg-green-50 p-6" aria-labelledby="interest-sent-title">
+      <section className="rounded-xl border border-brand/30 bg-brand-soft/60 p-6" aria-labelledby="interest-sent-title">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-reuse-green text-white" aria-hidden="true">
-            ✓
-          </div>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-on" aria-hidden="true">
+            <CheckIcon className="h-5 w-5" />
+          </span>
           <div>
-            <h2 id="interest-sent-title" className="font-bold text-gray-900">Interesse enviado</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              O doador já pode ver sua mensagem. Seus dados pessoais não são exibidos para outros visitantes.
+            <h2 id="interest-sent-title" className="font-semibold">
+              Interesse enviado
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Quem anunciou já pode ver sua mensagem e seu e-mail para combinar a entrega.
             </p>
           </div>
         </div>
-        <blockquote className="mt-4 rounded-xl border border-green-100 bg-white p-4 text-sm leading-6 text-gray-700">
-          “{data.ownInterest.message}”
-        </blockquote>
-        <p className="mt-3 text-xs text-gray-500">
-          Enviado em {formatDate(data.ownInterest.createdAt)}
-        </p>
+        <blockquote className="mt-4 rounded-lg border border-line bg-surface p-4 text-sm text-ink">“{data.ownInterest.message}”</blockquote>
+        <p className="mt-3 text-xs text-muted">Enviado em {formatDate(data.ownInterest.createdAt)}</p>
       </section>
     );
   }
 
+  const messageError = form.formState.errors.message;
+
   return (
-    <section className="mt-7 rounded-2xl border border-green-100 bg-green-50/60 p-6" aria-labelledby="interest-form-title">
+    <section className="rounded-xl border border-line bg-surface p-6" aria-labelledby="interest-form-title">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-100" aria-hidden="true">
-          💚
-        </div>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-text" aria-hidden="true">
+          <HeartIcon className="h-5 w-5" />
+        </span>
         <div>
-          <h2 id="interest-form-title" className="font-bold text-gray-900">Quero este item</h2>
-          <p className="mt-1 text-sm leading-6 text-gray-600">
-            Conte ao doador por que o item seria útil e combine a retirada com segurança.
-          </p>
-          <p className="mt-2 text-xs font-medium text-gray-500">
-            {data.total === 1 ? "1 interesse registrado" : `${data.total} interesses registrados`}
-          </p>
+          <h2 id="interest-form-title" className="font-semibold">
+            Quero este item
+          </h2>
+          <p className="mt-1 text-sm text-muted">Conte por que o item seria útil e quando você pode retirar.</p>
+          <p className="mt-2 text-xs font-medium text-muted">{totalLabel(data.total)}</p>
         </div>
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="mt-5 space-y-3" noValidate>
         <div>
-          <label htmlFor="interest-message" className="block text-sm font-semibold text-gray-800">
-            Mensagem para o doador
+          <label htmlFor="interest-message" className="field-label">
+            Mensagem para quem anunciou
           </label>
           <textarea
             id="interest-message"
             rows={4}
-            placeholder="Ex.: Posso retirar amanhã à tarde e vou reutilizá-lo em um projeto comunitário."
+            placeholder="Ex.: Posso retirar amanhã à tarde. Vou usar no projeto de leitura da escola do bairro."
             aria-describedby="interest-help interest-count"
-            aria-invalid={Boolean(form.formState.errors.message)}
-            className="mt-2 w-full resize-y rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-reuse-green focus:ring-2 focus:ring-green-100"
+            aria-invalid={Boolean(messageError)}
+            className="field resize-y"
             {...form.register("message", {
-              required: "Escreva uma mensagem para o doador.",
-              minLength: {
-                value: 10,
-                message: "Use pelo menos 10 caracteres.",
-              },
-              maxLength: {
-                value: 500,
-                message: "Use no máximo 500 caracteres.",
-              },
+              required: "Escreva uma mensagem para quem anunciou.",
+              minLength: { value: 10, message: "Use pelo menos 10 caracteres." },
+              maxLength: { value: 500, message: "Use no máximo 500 caracteres." },
             })}
           />
           <div className="mt-1.5 flex items-start justify-between gap-3 text-xs">
-            <p id="interest-help" className="text-gray-500">
+            <p id="interest-help" className="text-muted">
               Não inclua documentos, senhas ou dados bancários.
             </p>
-            <p id="interest-count" className="shrink-0 text-gray-400">
+            <p id="interest-count" className="shrink-0 text-muted">
               {message.length}/500
             </p>
           </div>
-          {form.formState.errors.message && (
-            <p className="mt-2 text-sm font-medium text-red-700" role="alert">
-              {form.formState.errors.message.message}
+          {messageError ? (
+            <p className="field-error" role="alert">
+              {messageError.message}
             </p>
-          )}
+          ) : null}
         </div>
 
-        {form.formState.errors.root && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3" role="alert">
-            <p className="text-sm text-red-800">{form.formState.errors.root.message}</p>
+        {form.formState.errors.root ? (
+          <div className="rounded-lg border border-danger/30 bg-danger-soft p-3" role="alert">
+            <p className="text-sm text-danger">{form.formState.errors.root.message}</p>
           </div>
-        )}
+        ) : null}
 
         <button
           type="submit"
           disabled={!form.formState.isValid || form.formState.isSubmitting}
-          className="reuse-button-primary w-full disabled:cursor-not-allowed disabled:opacity-55"
+          className="btn-primary w-full"
         >
-          {form.formState.isSubmitting ? "Enviando interesse..." : "Enviar interesse"}
+          {form.formState.isSubmitting ? "Enviando..." : "Enviar interesse"}
         </button>
       </form>
     </section>

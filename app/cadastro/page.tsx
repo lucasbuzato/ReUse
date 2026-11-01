@@ -1,41 +1,31 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import FormularioCadastro from "@/components/FormularioCadastro";
+import AuthShell from "@/components/site/AuthShell";
+import { getCurrentUser } from "@/lib/api";
+import { safeNextPath } from "@/lib/format";
 
-export default function CadastroPage() {
+export const metadata: Metadata = {
+  title: "Criar conta",
+  description: "Crie sua conta gratuita no ReUse! e comece a doar e trocar objetos perto de você.",
+};
+
+type Props = { searchParams: Promise<{ next?: string }> };
+
+export default async function CadastroPage({ searchParams }: Props) {
+  const next = safeNextPath((await searchParams).next);
+  if (await getCurrentUser()) redirect(next);
+
   return (
-    <div className="min-h-[65vh] flex items-center justify-center">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-reuse-green flex items-center justify-center text-white text-2xl font-bold shadow-sm">
-            R
-          </div>
-
-          <h1 className="text-3xl font-bold text-gray-800 mt-5">
-            Crie sua conta
-          </h1>
-
-          <p className="text-gray-500 mt-2">
-            Faça parte da comunidade ReUse!
-          </p>
-        </div>
-
-        <div className="reuse-card p-6 sm:p-8">
-          <FormularioCadastro />
-
-          <div className="border-t border-gray-100 mt-6 pt-6 text-center">
-            <p className="text-sm text-gray-500">
-              Já possui uma conta?
-            </p>
-
-            <Link
-              href="/login"
-              className="inline-block mt-2 text-reuse-green font-semibold hover:text-reuse-greenDark transition"
-            >
-              Entrar na minha conta →
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
+    <AuthShell eyebrow="Conta gratuita" title="Crie sua conta" text="Leva menos de um minuto. Depois é só anunciar ou procurar itens.">
+      <FormularioCadastro next={next} />
+      <p className="mt-8 border-t border-line pt-6 text-sm text-muted">
+        Já tem conta?{" "}
+        <Link href={`/login${next !== "/perfil" ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand-text hover:underline">
+          Entrar
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

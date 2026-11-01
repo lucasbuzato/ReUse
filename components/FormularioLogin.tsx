@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 
-export default function FormularioLogin() {
+export default function FormularioLogin({ next = "/perfil" }: { next?: string }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     setErro("");
     setCarregando(true);
 
@@ -20,7 +20,7 @@ export default function FormularioLogin() {
       });
 
       if (res.ok) {
-        window.location.assign("/perfil");
+        window.location.assign(next);
         return;
       }
 
@@ -34,16 +34,9 @@ export default function FormularioLogin() {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-md space-y-4"
-      aria-busy={carregando}
-    >
+    <form onSubmit={handleSubmit} className="space-y-5" aria-busy={carregando}>
       <div>
-        <label
-          htmlFor="login-email"
-          className="mb-1 block text-sm font-medium"
-        >
+        <label htmlFor="login-email" className="field-label">
           E-mail
         </label>
         <input
@@ -53,16 +46,13 @@ export default function FormularioLogin() {
           type="email"
           autoComplete="email"
           value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          className="min-h-11 w-full rounded-lg border border-gray-300 p-2"
+          onChange={(event) => setForm({ ...form, email: event.target.value })}
+          className="field"
         />
       </div>
 
       <div>
-        <label
-          htmlFor="login-password"
-          className="mb-1 block text-sm font-medium"
-        >
+        <label htmlFor="login-password" className="field-label">
           Senha
         </label>
         <input
@@ -70,25 +60,20 @@ export default function FormularioLogin() {
           name="password"
           required
           type="password"
-          minLength={6}
           autoComplete="current-password"
           value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-          className="min-h-11 w-full rounded-lg border border-gray-300 p-2"
+          onChange={(event) => setForm({ ...form, password: event.target.value })}
+          className="field"
         />
       </div>
 
-      {erro && (
-        <p className="text-sm text-red-600" role="alert" aria-live="assertive">
+      {erro ? (
+        <p className="rounded-lg border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger" role="alert">
           {erro}
         </p>
-      )}
+      ) : null}
 
-      <button
-        type="submit"
-        disabled={carregando}
-        className="reuse-button-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <button type="submit" disabled={carregando} className="btn-primary w-full !min-h-12">
         {carregando ? "Entrando..." : "Entrar"}
       </button>
     </form>
