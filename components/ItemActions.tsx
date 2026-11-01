@@ -3,42 +3,33 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function ItemActions({
-  itemId,
-  status,
-}: {
-  itemId: string;
-  status: string;
-}) {
-  const router = useRouter();
+type Action = { status: string; label: string; className: string };
 
+export default function ItemActions({ itemId, status, compact = false }: { itemId: string; status: string; compact?: boolean }) {
+  const router = useRouter();
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
+  const [aviso, setAviso] = useState("");
 
-  async function atualizarStatus(novoStatus: string) {
+  async function atualizarStatus(novoStatus: string, mensagem: string) {
     setCarregando(true);
     setErro("");
+    setAviso("");
 
     try {
       const res = await fetch(`/api/items/${itemId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: novoStatus,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: novoStatus }),
       });
-
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        setErro(
-          data?.error ?? "Não foi possível atualizar o status."
-        );
+        setErro(data?.error ?? "Não foi possível atualizar o status.");
         return;
       }
 
+      setAviso(mensagem);
       router.refresh();
     } catch {
       setErro("Erro de conexão com o servidor.");
@@ -48,26 +39,17 @@ export default function ItemActions({
   }
 
   async function remover() {
-    const confirmou = window.confirm(
-      "Tem certeza que deseja excluir este anúncio? Essa ação não pode ser desfeita."
-    );
-
-    if (!confirmou) return;
+    if (!window.confirm("Excluir este anúncio? Essa ação não pode ser desfeita.")) return;
 
     setCarregando(true);
     setErro("");
 
     try {
-      const res = await fetch(`/api/items/${itemId}`, {
-        method: "DELETE",
-      });
-
+      const res = await fetch(`/api/items/${itemId}`, { method: "DELETE" });
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        setErro(
-          data?.error ?? "Não foi possível remover o item."
-        );
+        setErro(data?.error ?? "Não foi possível remover o item.");
         return;
       }
 
@@ -80,82 +62,46 @@ export default function ItemActions({
     }
   }
 
+  const neutral = "border border-line bg-surface text-ink hover:border-brand/60";
+  const actions: Array<Action & { message: string }> = [
+    status === "DISPONIVEL"
+      ? { status: "PAUSADO", label: "Pausar", className: neutral, message: "Anúncio pausado. Ele saiu do catálogo." }
+      : { status: "DISPONIVEL", label: "Reativar", className: neutral, message: "Anúncio reativado no catálogo." },
+    ...(status !== "RESERVADO"
+      ? [{ status: "RESERVADO", label: "Reservar", className: neutral, message: "Item marcado como reservado." }]
+      : []),
+    ...(status !== "DOADO"
+      ? [{ status: "DOADO", label: "Marcar como doado", className: "bg-brand text-brand-on hover:bg-brand-strong", message: "Parabéns! Item marcado como doado." }]
+      : []),
+  ];
+
   return (
-    <div className="mt-5 border-t border-gray-100 pt-5">
+    <div className={compact ? "" : "mt-4"}>
       <div className="flex flex-wrap gap-2">
-        {status === "DISPONIVEL" && (
+        {actions.map((action) => (
           <button
+            key={action.status}
             type="button"
             disabled={carregando}
-            onClick={() => atualizarStatus("PAUSADO")}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-sm font-semibold hover:bg-slate-100 transition disabled:opacity-50"
+            onClick={() => atualizarStatus(action.status, action.message)}
+            className={`btn !px-3.5 text-sm ${action.className}`}
           >
-            ⏸ Pausar anúncio
+            {action.label}
           </button>
-        )}
-
-        {status !== "DISPONIVEL" && (
-          <button
-            type="button"
-            disabled={carregando}
-            onClick={() =>
-              atualizarStatus("DISPONIVEL")
-            }
-            className="px-4 py-2.5 rounded-xl border border-green-200 bg-green-50 text-green-700 text-sm font-semibold hover:bg-green-100 transition disabled:opacity-50"
-          >
-            ✓ Disponível
-          </button>
-        )}
-
-        {status !== "RESERVADO" && (
-          <button
-            type="button"
-            disabled={carregando}
-            onClick={() =>
-              atualizarStatus("RESERVADO")
-            }
-            className="px-4 py-2.5 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700 text-sm font-semibold hover:bg-yellow-100 transition disabled:opacity-50"
-          >
-            ◷ Reservar
-          </button>
-        )}
-
-        {status !== "DOADO" && (
-          <button
-            type="button"
-            disabled={carregando}
-            onClick={() =>
-              atualizarStatus("DOADO")
-            }
-            className="px-4 py-2.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition disabled:opacity-50"
-          >
-            ♻️ Marcar como doado
-          </button>
-        )}
-
-        <button
-          type="button"
-          disabled={carregando}
-          onClick={remover}
-          className="px-4 py-2.5 rounded-xl bg-red-50 text-red-700 text-sm font-semibold hover:bg-red-100 transition disabled:opacity-50"
-        >
-          🗑 Excluir
+        ))}
+        <button type="button" disabled={carregando} onClick={remover} className="btn-danger !px-3.5 text-sm">
+          Excluir
         </button>
       </div>
 
-      <div className="mt-3 min-h-5" aria-live="polite" aria-atomic="true">
-        {carregando && (
-          <p className="text-xs text-gray-500">Atualizando anúncio...</p>
-        )}
-
-        {erro && (
-          <div
-            className="rounded-xl border border-red-100 bg-red-50 p-3"
-            role="alert"
-          >
-            <p className="text-sm text-red-700">⚠️ {erro}</p>
-          </div>
-        )}
+      <div className="mt-2 min-h-5 text-sm" aria-live="polite" aria-atomic="true">
+        {carregando ? <p className="text-muted">Atualizando anúncio...</p> : null}
+        {!carregando && aviso ? <p className="text-brand-text">{aviso}</p> : null}
+        {erro ? (
+          <p className="text-danger" role="alert">
+            {erro}
+          </p>
+        ) : null}
       </div>
     </div>
   );

@@ -6,17 +6,20 @@ export default defineConfig([
   ...nextVitals,
   ...nextTypeScript,
   {
-    files: ["prisma/seed.js"],
+    files: ["next.config.js", "tailwind.config.js", "postcss.config.js"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
     },
   },
   globalIgnores([
     ".next/**",
+    ".vercel/**",
     ".test-dist/**",
     "out/**",
     "build/**",
     "coverage/**",
     "next-env.d.ts",
+    "backend/**",
+    "scripts/**",
   ]),
 ]);

@@ -10,20 +10,16 @@ export default function LogoutButton() {
 
     try {
       await fetch("/api/users/logout", { method: "POST" });
-      window.location.assign("/");
     } finally {
-      setCarregando(false);
+      // Recarga completa (não router.push): renova a identidade do Assistant e o cabeçalho.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign("/");
     }
   }
 
   return (
-    <button
-      type="button"
-      onClick={sair}
-      disabled={carregando}
-      className="min-h-11 rounded-lg px-3 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {carregando ? "Saindo..." : "Sair"}
+    <button type="button" onClick={sair} disabled={carregando} className="btn-secondary">
+      {carregando ? "Saindo..." : "Sair da conta"}
     </button>
   );
 }

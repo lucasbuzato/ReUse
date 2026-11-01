@@ -1,253 +1,224 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
 import ItemActions from "@/components/ItemActions";
 import LogoutButton from "@/components/LogoutButton";
+import SignInPrompt from "@/components/site/SignInPrompt";
+import EmptyState from "@/components/ui/EmptyState";
+import { PanelIcon, PinIcon, PlusIcon } from "@/components/ui/Icons";
+import ItemImage from "@/components/ui/ItemImage";
+import StatusBadge from "@/components/ui/StatusBadge";
+import { getCurrentUser, getMyInterests, getMyItems } from "@/lib/api";
+import { formatMonthYear, formatNumber, plural, timeAgo } from "@/lib/format";
+import { backendLinks } from "@/lib/site";
+import type { Item, MyInterest } from "@/lib/types";
+
+export const metadata: Metadata = {
+  title: "Meu perfil",
+  robots: { index: false },
+};
+
+function LoadError({ what }: { what: string }) {
+  return (
+    <p className="rounded-xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger" role="alert">
+      Não foi possível carregar {what} agora. Recarregue a página em alguns segundos.
+    </p>
+  );
+}
+
+function SectionHeading({ id, title, text, children }: { id: string; title: string; text: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h2 id={id} className="text-2xl font-bold tracking-tight">
+          {title}
+        </h2>
+        <p className="mt-1 text-muted">{text}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export default async function PerfilPage() {
-  const userId = await getCurrentUser();
+  const user = await getCurrentUser();
 
-  if (!userId) {
+  if (!user) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="reuse-card max-w-lg w-full p-8 text-center">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-reuse-greenLight flex items-center justify-center text-3xl">
-            👤
-          </div>
-
-          <h1 className="text-2xl font-bold text-gray-800 mt-5">
-            Acesse seu perfil
-          </h1>
-
-          <p className="text-gray-500 mt-2 leading-relaxed">
-            Entre na sua conta para visualizar seus dados, anúncios e
-            manifestações de interesse.
-          </p>
-
-          <div className="flex flex-col sm:flex-row justify-center gap-3 mt-7">
-            <Link
-              href="/login"
-              className="reuse-button-primary"
-            >
-              Entrar
-            </Link>
-
-            <Link
-              href="/cadastro"
-              className="reuse-button-secondary"
-            >
-              Criar conta
-            </Link>
-          </div>
-        </div>
-      </div>
+      <SignInPrompt
+        title="Acesse seu perfil"
+        text="Entre para ver seus anúncios, os interesses que você recebeu e os itens que você pediu."
+        next="/perfil"
+      />
     );
   }
 
-  const usuario = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      items: {
-        include: {
-          _count: {
-            select: {
-              interests: true,
-            },
-          },
-          category: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      },
-    },
-  });
+  const [items, interests] = await Promise.all([
+    getMyItems().catch(() => null as Item[] | null),
+    getMyInterests().catch(() => null as MyInterest[] | null),
+  ]);
 
-  if (!usuario) return null;
-
-  const totalInteresses = usuario.items.reduce(
-    (total, item) => total + item._count.interests,
-    0
-  );
+  const firstName = user.name.trim().split(/\s+/)[0] ?? user.name;
+  const receivedInterests = items?.reduce((total, item) => total + item._count.interests, 0) ?? 0;
+  const stats = [
+    { label: "Anúncios ativos", value: items?.filter((item) => item.status === "DISPONIVEL").length ?? 0 },
+    { label: "Interesses recebidos", value: receivedInterests },
+    { label: "Itens doados", value: items?.filter((item) => item.status === "DOADO").length ?? 0 },
+    { label: "Interesses enviados", value: interests?.length ?? 0 },
+  ];
+  const hasAdminAccess = user.role === "ADMIN" || user.role === "VIEWER";
 
   return (
-    <div className="space-y-8">
-      {/* CABEÇALHO */}
-      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-reuse-green font-semibold">
-            Minha conta
-          </p>
-
-          <h1 className="text-3xl font-bold text-gray-800 mt-1">
-            Olá, {usuario.name.split(" ")[0]}! 👋
-          </h1>
+    <div className="page space-y-12 py-10 sm:py-14">
+      <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div className="flex items-center gap-4">
+          <span
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-brand text-2xl font-bold text-brand-on"
+            aria-hidden="true"
+          >
+            {firstName.charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <p className="eyebrow">Minha conta</p>
+            <h1 className="mt-1 truncate text-3xl font-bold tracking-tight sm:text-4xl">Olá, {firstName}</h1>
+            <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+              <span className="inline-flex items-center gap-1">
+                <PinIcon className="h-3.5 w-3.5" />
+                {user.city ?? "Cidade não informada"}
+              </span>
+              <span>Membro desde {formatMonthYear(user.createdAt)}</span>
+            </p>
+          </div>
         </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Link href="/itens/novo" className="btn-primary">
+            <PlusIcon />
+            Anunciar item
+          </Link>
+          <LogoutButton />
+        </div>
+      </header>
 
-        <LogoutButton />
+      <section aria-label="Resumo da conta">
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line lg:grid-cols-4">
+          {stats.map((stat) => (
+            <div key={stat.label} className="flex flex-col bg-surface px-5 py-4">
+              <dt className="order-2 text-sm text-muted">{stat.label}</dt>
+              <dd className="text-3xl font-bold tracking-tight">{formatNumber(stat.value)}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
-      {/* PERFIL */}
-      <section className="reuse-card overflow-hidden">
-        <div className="h-24 bg-reuse-greenDark" />
-
-        <div className="px-6 pb-6">
-          <div className="-mt-10 flex flex-col sm:flex-row sm:items-end gap-4">
-            <div className="w-20 h-20 rounded-2xl border-4 border-white bg-reuse-green flex items-center justify-center text-white text-2xl font-bold shadow-sm">
-              {usuario.name.charAt(0).toUpperCase()}
-            </div>
-
-            <div className="pb-1">
-              <h2 className="text-xl font-bold text-gray-800">
-                {usuario.name}
+      {hasAdminAccess ? (
+        <section
+          aria-labelledby="admin-titulo"
+          className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-start gap-4">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-text">
+              <PanelIcon />
+            </span>
+            <div>
+              <h2 id="admin-titulo" className="font-semibold">
+                Painel administrativo
               </h2>
-
-              <p className="text-sm text-gray-500">
-                {usuario.email}
+              <p className="text-sm text-muted">
+                {user.role === "ADMIN"
+                  ? "Sua conta pode moderar anúncios, categorias e usuários."
+                  : "Sua conta tem acesso de leitura aos dados e indicadores."}{" "}
+                Use o mesmo e-mail e senha.
               </p>
             </div>
           </div>
+          <a href={backendLinks.admin} className="btn-secondary shrink-0">
+            Abrir painel
+          </a>
+        </section>
+      ) : null}
 
-          <div className="mt-6 flex flex-wrap gap-4 text-sm text-gray-500">
-            <span>
-              📍 {usuario.city ?? "Cidade não informada"}
-            </span>
+      <section aria-labelledby="anuncios-titulo" className="space-y-5">
+        <SectionHeading id="anuncios-titulo" title="Meus anúncios" text="Atualize o status quando combinar a entrega." />
 
-            <span>
-              📦 {usuario.items.length}{" "}
-              {usuario.items.length === 1 ? "anúncio" : "anúncios"}
-            </span>
-
-            <span>
-              💚 {totalInteresses} interessados
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* ESTATÍSTICAS */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="reuse-card p-5">
-          <p className="text-sm text-gray-500">Meus anúncios</p>
-          <p className="text-3xl font-bold text-reuse-greenDark mt-1">
-            {usuario.items.length}
-          </p>
-        </div>
-
-        <div className="reuse-card p-5">
-          <p className="text-sm text-gray-500">Interesses recebidos</p>
-          <p className="text-3xl font-bold text-reuse-greenDark mt-1">
-            {totalInteresses}
-          </p>
-        </div>
-
-        <div className="reuse-card p-5">
-          <p className="text-sm text-gray-500">Itens doados</p>
-          <p className="text-3xl font-bold text-reuse-greenDark mt-1">
-            {usuario.items.filter((item) => item.status === "DOADO").length}
-          </p>
-        </div>
-      </section>
-
-      {/* ITENS */}
-      <section>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">
-              Meus anúncios
-            </h2>
-
-            <p className="text-sm text-gray-500 mt-1">
-              Gerencie os itens que você publicou.
-            </p>
-          </div>
-
-          <Link
-            href="/itens/novo"
-            className="reuse-button-primary !px-4 !py-2.5"
-          >
-            + Novo anúncio
-          </Link>
-        </div>
-
-        {usuario.items.length === 0 ? (
-          <div className="reuse-card p-12 text-center">
-            <div className="text-5xl">📦</div>
-
-            <h3 className="font-bold text-gray-800 mt-4">
-              Você ainda não anunciou nada
-            </h3>
-
-            <p className="text-sm text-gray-500 mt-2">
-              Publique algo que você não usa mais e ajude outra pessoa.
-            </p>
-
-            <Link
-              href="/itens/novo"
-              className="reuse-button-primary mt-5"
-            >
+        {items === null ? (
+          <LoadError what="seus anúncios" />
+        ) : items.length === 0 ? (
+          <EmptyState title="Você ainda não anunciou nada" text="Publique algo que você não usa mais. Leva menos de dois minutos.">
+            <Link href="/itens/novo" className="btn-primary">
+              <PlusIcon />
               Criar primeiro anúncio
             </Link>
-          </div>
+          </EmptyState>
         ) : (
-          <div className="space-y-4">
-            {usuario.items.map((item) => {
-              const status = {
-                DISPONIVEL: "bg-green-100 text-green-700",
-                PAUSADO: "bg-slate-100 text-slate-700",
-                RESERVADO: "bg-yellow-100 text-yellow-700",
-                DOADO: "bg-gray-100 text-gray-600",
-              }[item.status] ?? "bg-gray-100 text-gray-600";
-
-              return (
-                <div
-                  key={item.id}
-                  className="reuse-card p-5 hover:shadow-md transition"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <Link
-                      href={`/itens/${item.id}`}
-                      className="flex-1"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="bg-reuse-greenLight text-reuse-greenDark px-3 py-1 rounded-full text-xs font-semibold">
-                          {item.category.name}
-                        </span>
-
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${status}`}
-                        >
-                          {item.status === "DISPONIVEL"
-                            ? "Disponível"
-                            : item.status === "PAUSADO"
-                              ? "Pausado"
-                              : item.status === "RESERVADO"
-                                ? "Reservado"
-                                : "Doado"}
-                        </span>
-                      </div>
-
-                      <h3 className="font-bold text-gray-800 text-lg mt-3">
-                        {item.title}
-                      </h3>
-
-                      <p className="text-sm text-gray-500 mt-1">
-                        {item._count.interests}{" "}
-                        {item._count.interests === 1
-                          ? "pessoa interessada"
-                          : "pessoas interessadas"}
-                      </p>
-                    </Link>
-
-                    <ItemActions
-                      itemId={item.id}
-                      status={item.status}
-                    />
+          <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+            {items.map((item) => (
+              <li key={item.id} className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+                <Link href={`/itens/${item.id}`} className="group flex min-w-0 items-center gap-4">
+                  <div className="h-[4.5rem] w-24 shrink-0 overflow-hidden rounded-lg border border-line bg-soft">
+                    <ItemImage src={item.imageUrl} alt="" />
                   </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusBadge status={item.status} />
+                      <span className="text-xs font-semibold text-brand-text">{item.category.name}</span>
+                    </div>
+                    <p className="mt-1.5 truncate font-semibold group-hover:text-brand-text group-hover:underline">{item.title}</p>
+                    <p className="text-sm text-muted">
+                      {plural(item._count.interests, "interessado", "interessados")} · publicado {timeAgo(item.createdAt)}
+                    </p>
+                  </div>
+                </Link>
+                <div className="lg:shrink-0">
+                  <ItemActions itemId={item.id} status={item.status} compact />
                 </div>
-              );
-            })}
-          </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="interesses-titulo" className="space-y-5">
+        <SectionHeading
+          id="interesses-titulo"
+          title="Meus interesses"
+          text="Itens que você pediu. Quem anunciou recebe sua mensagem e responde por e-mail."
+        />
+
+        {interests === null ? (
+          <LoadError what="seus interesses" />
+        ) : interests.length === 0 ? (
+          <EmptyState title="Nenhum interesse enviado" text="Encontrou algo útil no catálogo? Envie uma mensagem para quem anunciou.">
+            <Link href="/itens" className="btn-secondary">
+              Explorar itens
+            </Link>
+          </EmptyState>
+        ) : (
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {interests.map((interest) => (
+              <li key={interest.id}>
+                <Link
+                  href={`/itens/${interest.item.id}`}
+                  className="group flex h-full gap-4 rounded-xl border border-line bg-surface p-4 transition-colors hover:border-brand/60"
+                >
+                  <div className="h-[4.5rem] w-24 shrink-0 overflow-hidden rounded-lg border border-line bg-soft">
+                    <ItemImage src={interest.item.imageUrl} alt="" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusBadge status={interest.item.status} />
+                      <span className="text-xs font-semibold text-brand-text">{interest.item.category.name}</span>
+                    </div>
+                    <p className="mt-1.5 truncate font-semibold group-hover:text-brand-text group-hover:underline">
+                      {interest.item.title}
+                    </p>
+                    <p className="truncate text-sm text-muted">
+                      {interest.item.owner.name} · enviado {timeAgo(interest.createdAt)}
+                    </p>
+                    <p className="mt-2 line-clamp-2 text-sm">“{interest.message}”</p>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </div>

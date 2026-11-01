@@ -34,6 +34,10 @@ type WebChatInstance = {
     type: "identityTokenExpired";
     handler: (event: IdentityTokenExpiredEvent) => void | Promise<void>;
   }): void;
+  on(options: {
+    type: "window:open" | "window:close";
+    handler: () => void;
+  }): void;
   openWindow?(): void | Promise<void>;
   render(): void | Promise<void>;
   send(message: { input: { text: string } }): void | Promise<void>;
@@ -337,6 +341,8 @@ export default function WatsonAssistantChat() {
     "idle" | "requesting" | "listening" | "stopping" | "sending" | "error"
   >("idle");
   const [voiceFeedback, setVoiceFeedback] = useState("");
+  // Posição do botão de voz: acima do lançador (chat fechado) ou ao lado da janela (chat aberto).
+  const [chatOpen, setChatOpen] = useState(false);
   const webChatInstanceRef = useRef<WebChatInstance | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const stopVoiceInputRef = useRef<(() => void) | null>(null);
@@ -825,10 +831,24 @@ export default function WatsonAssistantChat() {
               },
             });
 
+            instance.on({
+              type: "window:open",
+              handler() {
+                if (mounted) setChatOpen(true);
+              },
+            });
+
+            instance.on({
+              type: "window:close",
+              handler() {
+                if (mounted) setChatOpen(false);
+              },
+            });
+
             instance.updateCSSVariables?.({
-              $focus: "#2F7D5A",
-              "$interactive-01": "#2F7D5A",
-              "$interactive-02": "#20563E",
+              $focus: "#1d5c45",
+              "$interactive-01": "#1d5c45",
+              "$interactive-02": "#154533",
             });
 
             await instance.render();
@@ -890,7 +910,9 @@ export default function WatsonAssistantChat() {
         <>
           {voiceFeedback ? (
             <span
-              className={`fixed bottom-40 right-5 z-[100000] max-w-xs rounded-md border bg-white px-3 py-2 text-sm font-medium shadow-sm md:bottom-20 md:right-[27rem] ${
+              className={`fixed bottom-40 right-5 z-[100000] max-w-xs rounded-md border bg-white px-3 py-2 text-sm font-medium shadow-sm ${
+                chatOpen ? "md:bottom-20 md:right-[27rem]" : "md:bottom-[10.5rem] md:right-8"
+              } ${
                 voiceStatus === "error"
                   ? "border-red-200 text-red-700"
                   : "border-slate-200 text-slate-800"
@@ -916,10 +938,13 @@ export default function WatsonAssistantChat() {
             title={voiceLabel}
             data-testid="watson-assistant-voice"
             data-state={voiceStatus}
-            className={`fixed bottom-24 right-5 z-[100000] flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2F7D5A]/30 disabled:cursor-wait disabled:opacity-70 md:bottom-6 md:right-[28rem] ${
+            data-chat-open={chatOpen}
+            className={`fixed bottom-24 right-5 z-[100000] flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1d5c45]/30 disabled:cursor-wait disabled:opacity-70 ${
+              chatOpen ? "md:bottom-6 md:right-[28rem]" : "md:bottom-[6.5rem] md:right-9"
+            } ${
               voiceStatus === "listening" || voiceStatus === "stopping"
                 ? "bg-red-600 hover:bg-red-700"
-                : "bg-[#2F7D5A] hover:bg-[#20563E]"
+                : "bg-[#1d5c45] hover:bg-[#154533]"
             }`}
           >
             {voiceStatus === "listening" || voiceStatus === "stopping" ? (

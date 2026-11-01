@@ -1,32 +1,21 @@
-export default function ItemsLoading() {
+export default function LoadingItems() {
   return (
-    <div className="space-y-8" aria-busy="true" aria-label="Carregando catálogo de itens">
-      <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
-        <div className="h-4 w-44 animate-pulse rounded bg-green-100" />
-        <div className="mt-4 h-10 max-w-xl animate-pulse rounded-lg bg-gray-100" />
-        <div className="mt-3 h-5 max-w-2xl animate-pulse rounded bg-gray-100" />
-        <div className="mt-7 h-12 animate-pulse rounded-xl bg-gray-100" />
-      </section>
-
-      <div className="flex gap-2 overflow-hidden">
-        {[1, 2, 3, 4, 5].map((item) => (
-          <div key={item} className="h-10 w-28 shrink-0 animate-pulse rounded-full bg-gray-100" />
-        ))}
-      </div>
-
-      <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3, 4, 5, 6].map((item) => (
-          <div key={item} className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-            <div className="aspect-[4/3] animate-pulse bg-gray-100" />
-            <div className="space-y-3 p-5">
-              <div className="h-3 w-24 animate-pulse rounded bg-green-100" />
-              <div className="h-6 w-3/4 animate-pulse rounded bg-gray-100" />
-              <div className="h-4 w-full animate-pulse rounded bg-gray-100" />
-              <div className="h-4 w-2/3 animate-pulse rounded bg-gray-100" />
+    <div className="page pb-8 pt-10 sm:pt-14" aria-busy="true" aria-label="Carregando itens">
+      <div className="h-4 w-24 animate-pulse rounded bg-soft" />
+      <div className="mt-4 h-12 w-full max-w-lg animate-pulse rounded-lg bg-soft" />
+      <div className="mt-8 h-12 w-full animate-pulse rounded-lg bg-soft" />
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <div key={index} className="overflow-hidden rounded-xl border border-line bg-surface">
+            <div className="aspect-[4/3] animate-pulse bg-soft" />
+            <div className="space-y-2 p-4">
+              <div className="h-3 w-20 animate-pulse rounded bg-soft" />
+              <div className="h-4 w-4/5 animate-pulse rounded bg-soft" />
+              <div className="h-3 w-1/2 animate-pulse rounded bg-soft" />
             </div>
           </div>
         ))}
-      </section>
+      </div>
     </div>
   );
 }

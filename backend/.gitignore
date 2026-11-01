@@ -1,0 +1,8 @@
+node_modules
+dist
+.adminjs
+public/admin-assets
+.env
+.env*.local
+.vercel
+*.log
