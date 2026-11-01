@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { backendPublicUrl } from "@/lib/site";
+import { backendLinks } from "@/lib/site";
 import { Wordmark } from "./Logo";
 
 export default function Footer() {
@@ -37,8 +37,8 @@ export default function Footer() {
         <nav aria-label="Projeto">
           <h2 className="text-sm font-semibold text-ink">Projeto</h2>
           <ul className="mt-2 space-y-1 text-sm text-muted">
-            <li><a className="inline-flex min-h-8 items-center hover:text-brand-text" href={`${backendPublicUrl}/api/docs`}>Documentação da API</a></li>
-            <li><a className="inline-flex min-h-8 items-center hover:text-brand-text" href={`${backendPublicUrl}/admin`}>Área administrativa</a></li>
+            <li><a className="inline-flex min-h-8 items-center hover:text-brand-text" href={backendLinks.docs}>Documentação da API</a></li>
+            <li><a className="inline-flex min-h-8 items-center hover:text-brand-text" href={backendLinks.admin}>Área administrativa</a></li>
             <li><a className="inline-flex min-h-8 items-center hover:text-brand-text" href="https://github.com/lucasbuzato/ReUse">Código no GitHub</a></li>
           </ul>
         </nav>

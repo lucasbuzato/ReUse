@@ -4,7 +4,7 @@
   "private": true,
   "description": "Frontend Next.js do ReUse! — consome a API Node.js (pasta backend/).",
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "next dev",

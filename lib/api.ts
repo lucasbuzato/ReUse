@@ -5,14 +5,25 @@ import type { Category, CurrentUser, Item, MyInterest, Stats } from "./types";
 
 /**
  * Cliente da API usado pelos Server Components. No navegador as chamadas usam
- * /api/* (reescrito para o backend no next.config.js); aqui no servidor falamos
- * direto com o backend e repassamos só o cookie de sessão do ReUse!.
+ * /api/* no mesmo domínio; aqui no servidor falamos direto com o backend e
+ * repassamos só o cookie de sessão do ReUse!.
+ *
+ * Endereço do backend, nesta ordem:
+ * 1. BACKEND_URL — na Vercel é injetada em tempo de execução pelo binding do
+ *    serviço "web" para o serviço "api" (vercel.json); localmente pode vir do .env.
+ * 2. URL do próprio deploy na Vercel (o vercel.json envia /api para o serviço "api").
+ * 3. API local em http://localhost:4000.
  */
-const DEFAULT_BACKEND_URL = "https://reuse-api-lucasbuzatos-projects.vercel.app";
-const BACKEND_URL = (
-  process.env.BACKEND_URL ||
-  (process.env.NODE_ENV === "production" ? DEFAULT_BACKEND_URL : "http://localhost:4000")
-).replace(/\/$/, "");
+function backendBaseUrl() {
+  const base =
+    process.env.BACKEND_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:4000");
+  return base.endsWith("/") ? base : `${base}/`;
+}
+
+function backendUrl(path: string) {
+  return new URL(path.replace(/^\//, ""), backendBaseUrl()).toString();
+}
 
 const SESSION_COOKIE = "reuse_session";
 const TIMEOUT_MS = 10_000;
@@ -33,7 +44,7 @@ async function sessionHeader(): Promise<Record<string, string>> {
 }
 
 async function apiGet<T>(path: string, { auth = false }: { auth?: boolean } = {}): Promise<T> {
-  const response = await fetch(`${BACKEND_URL}${path}`, {
+  const response = await fetch(backendUrl(path), {
     headers: { accept: "application/json", ...(auth ? await sessionHeader() : {}) },
     cache: "no-store",
     signal: AbortSignal.timeout(TIMEOUT_MS),

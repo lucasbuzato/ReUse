@@ -13,6 +13,7 @@ export default defineConfig([
   },
   globalIgnores([
     ".next/**",
+    ".vercel/**",
     ".test-dist/**",
     "out/**",
     "build/**",

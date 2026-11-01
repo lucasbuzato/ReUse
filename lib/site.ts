@@ -1,6 +1,5 @@
-/** URLs públicas usadas em metadados, rodapé e links para o backend. */
+/** URLs públicas usadas em metadados e links. */
 const DEFAULT_SITE_URL = "https://reuse-alpha.vercel.app";
-const DEFAULT_BACKEND_URL = "https://reuse-api-lucasbuzatos-projects.vercel.app";
 
 function withProtocol(host: string | undefined) {
   if (!host) return undefined;
@@ -13,11 +12,16 @@ export const siteUrl = (
   (process.env.NODE_ENV === "production" ? DEFAULT_SITE_URL : "http://localhost:3000")
 ).replace(/\/$/, "");
 
-/** Endereço público da API (documentação, health check e painel administrativo). */
-export const backendPublicUrl = (
-  process.env.BACKEND_URL ||
-  (process.env.NODE_ENV === "production" ? DEFAULT_BACKEND_URL : "http://localhost:4000")
-).replace(/\/$/, "");
+/**
+ * Caminhos públicos da API no mesmo domínio do site. Na Vercel o vercel.json
+ * envia estes caminhos para o serviço "api"; localmente o next.config.js
+ * encaminha para a API em http://localhost:4000.
+ */
+export const backendLinks = {
+  docs: "/api/docs",
+  admin: "/admin",
+  health: "/health",
+} as const;
 
 export const siteName = "ReUse!";
 export const siteDescription =

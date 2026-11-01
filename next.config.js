@@ -1,15 +1,19 @@
 /**
- * Frontend do ReUse!. Toda chamada para /api/* é encaminhada para a API Node.js
- * (projeto separado na Vercel). Assim o navegador fala só com este domínio:
- * os cookies de sessão continuam first-party e as URLs antigas (inclusive as
- * usadas pela extensão do IBM watsonx Assistant) continuam funcionando.
+ * Frontend do ReUse!.
+ *
+ * Na Vercel, site e API ficam no mesmo projeto ("reuse") com Vercel Services:
+ * o vercel.json envia /api, /admin e /health para o serviço "api" (pasta
+ * backend/) antes de a requisição chegar ao Next.js. Assim o navegador fala só
+ * com um domínio, os cookies de sessão continuam first-party e as URLs usadas
+ * pela extensão do IBM watsonx Assistant continuam iguais.
+ *
+ * Fora da Vercel (npm run dev / npm start), o próprio Next.js faz esse
+ * encaminhamento para a API local (BACKEND_URL, padrão http://localhost:4000).
  */
-const DEFAULT_BACKEND_URL = "https://reuse-api-lucasbuzatos-projects.vercel.app";
+const backendUrl = (process.env.BACKEND_URL || "http://localhost:4000").replace(/\/$/, "");
+const proxyToLocalBackend = !process.env.VERCEL;
 
-const backendUrl = (
-  process.env.BACKEND_URL ||
-  (process.env.NODE_ENV === "production" ? DEFAULT_BACKEND_URL : "http://localhost:4000")
-).replace(/\/$/, "");
+const backendPaths = ["/api/:path*", "/admin/:path*", "/admin-assets/:path*", "/brand/:path*", "/health"];
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -23,7 +27,8 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
+    if (!proxyToLocalBackend) return [];
+    return backendPaths.map((source) => ({ source, destination: `${backendUrl}${source}` }));
   },
   async headers() {
     return [

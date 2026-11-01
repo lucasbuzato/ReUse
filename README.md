@@ -8,10 +8,10 @@ A pessoa anuncia o item, outras pessoas demonstram interesse e o dono escolhe pa
 | O quê | Link |
 | --- | --- |
 | Site (frontend Next.js) | https://reuse-alpha.vercel.app |
-| API (backend Node.js) | https://reuse-api-lucasbuzatos-projects.vercel.app |
-| Documentação da API (OpenAPI) | https://reuse-api-lucasbuzatos-projects.vercel.app/api/docs |
-| Área administrativa low-code (AdminJS) | https://reuse-api-lucasbuzatos-projects.vercel.app/admin |
-| Saúde da API | https://reuse-api-lucasbuzatos-projects.vercel.app/health |
+| API (backend Node.js) | https://reuse-alpha.vercel.app/api |
+| Documentação da API (OpenAPI) | https://reuse-alpha.vercel.app/api/docs |
+| Área administrativa low-code (AdminJS) | https://reuse-alpha.vercel.app/admin |
+| Saúde da API | https://reuse-alpha.vercel.app/health |
 
 As contas de demonstração e de avaliação estão no PDF de entrega. Elas não ficam no repositório.
 
@@ -29,11 +29,14 @@ As contas de demonstração e de avaliação estão no PDF de entrega. Elas não
 Navegador
    │
    ▼
-reuse-alpha.vercel.app ─ Next.js 16 (App Router, SSR)
-   │  páginas: o servidor do Next chama a API e repassa só o cookie de sessão
-   │  /api/*: reescrito para a API (o navegador fala com um só domínio)
+reuse-alpha.vercel.app ─ um projeto na Vercel com dois serviços (vercel.json)
+   │
+   ├─ /api, /admin, /health ──► serviço "api" (pasta backend/)
+   └─ todo o resto ───────────► serviço "web" (raiz, Next.js 16, SSR)
+                                   o servidor do Next chama a API pelo binding
+                                   interno e repassa só o cookie de sessão
    ▼
-reuse-api ─ Node.js + Express + TypeScript
+serviço "api" ─ Node.js + Express + TypeScript
    ├─ /api/*     API REST (itens, interesses, contas, categorias, estatísticas, assistente)
    ├─ /api/docs  documentação OpenAPI
    └─ /admin     AdminJS (low code) com perfis ADMIN e VIEWER
@@ -44,19 +47,20 @@ PostgreSQL (Neon) via Prisma ORM
 IBM watsonx Assistant ──► /api/assistant/actions/* (chave de API + token assinado)
 ```
 
-Por que separar em dois projetos:
+Por que separar frontend e backend (mesmo no mesmo projeto da Vercel):
 
-- o frontend e o backend têm deploy, variáveis e logs próprios;
+- cada serviço tem build, dependências e logs próprios;
 - a API pode atender outros clientes (assistente IBM, painel, app móvel no futuro);
-- o painel AdminJS fica no backend, perto do banco, sem pesar no site.
+- o painel AdminJS fica no backend, perto do banco, sem pesar no site;
+- um só domínio: os cookies de sessão são first-party e não há CORS entre site e API.
 
 ## Tecnologias
 
 - **Frontend:** Next.js 16, React 18, Tailwind CSS 3, SWR, React Hook Form.
-- **Backend:** Node.js 20+, Express 4, TypeScript (ESM), Prisma 5, PostgreSQL.
+- **Backend:** Node.js 24, Express 4, TypeScript (ESM), Prisma 5, PostgreSQL.
 - **Low code:** AdminJS 7 com adaptador Prisma, tema e textos em português.
 - **ChatBot:** IBM watsonx Assistant (Web Chat + extensão OpenAPI).
-- **Hospedagem gratuita:** Vercel (dois projetos) e Neon (PostgreSQL).
+- **Hospedagem gratuita:** Vercel (um projeto com Vercel Services) e Neon (PostgreSQL).
 
 ## Estrutura de pastas
 
@@ -145,24 +149,24 @@ npm run dev                 # http://localhost:3000, usa a API em http://localho
 
 ## Variáveis de ambiente
 
-### Backend (`backend/.env` ou projeto `reuse-api` na Vercel)
+### Backend (`backend/.env` ou variáveis do projeto na Vercel)
 
 | Variável | Obrigatória | Uso |
 | --- | --- | --- |
 | `DATABASE_URL` | sim | Conexão PostgreSQL (Neon em produção). |
 | `AUTH_SECRET` | sim | Assina o cookie de sessão. Use o mesmo valor do frontend antigo para manter as sessões. |
-| `FRONTEND_URL` | produção | URL do site (CORS e links do painel). |
-| `PUBLIC_API_URL` | opcional | URL pública da API (links da documentação e do painel). |
+| `FRONTEND_URL` | opcional | URL do site (links do painel). Padrão em produção: `https://reuse-alpha.vercel.app`. |
+| `PUBLIC_API_URL` | opcional | URL pública da API (assets do painel). Padrão na Vercel: URL do deploy. |
 | `CORS_ORIGINS` | opcional | Outras origens permitidas, separadas por vírgula. |
 | `ASSISTANT_ACTION_SECRET`, `ASSISTANT_EXTENSION_API_KEY` | assistente | Protegem as ações do IBM watsonx Assistant. |
 | `ASSISTANT_WEB_CHAT_PRIVATE_KEY_BASE64`, `ASSISTANT_WEB_CHAT_IBM_PUBLIC_KEY_BASE64` | assistente | Segurança do Web Chat (JWT). |
 | `SEED_PASSWORD` | seed fora do local | Senha das contas de demonstração. |
 
-### Frontend (raiz ou projeto `reuse` na Vercel)
+### Frontend (raiz)
 
 | Variável | Uso |
 | --- | --- |
-| `BACKEND_URL` | URL da API. É lida **no build** (reescrita de `/api/*`). Depois de mudar, faça novo deploy. |
+| `BACKEND_URL` | Só fora da Vercel: URL da API local (padrão `http://localhost:4000`). Na Vercel o binding do `vercel.json` injeta este valor. |
 | `NEXT_PUBLIC_SITE_URL` | URL pública do site (metadados e sitemap). Opcional. |
 | `NEXT_PUBLIC_IBM_ASSISTANT_*` | Dados públicos do Web Chat do IBM watsonx Assistant. |
 
@@ -170,20 +174,24 @@ Nunca publique arquivos `.env` nem credenciais reais.
 
 ## Deploy na Vercel (plano gratuito)
 
-São dois projetos ligados ao mesmo repositório:
+Um só projeto (`reuse`), ligado ao repositório do GitHub, com **Vercel Services**.
+O `vercel.json` define os dois serviços e as rotas públicas:
 
-| Projeto | Pasta raiz | Build |
-| --- | --- | --- |
-| `reuse-api` | `backend` | `npm run build` (Prisma Client, tipos e bundle do AdminJS) |
-| `reuse` | raiz | `npm run build` (Next.js) |
+| Serviço | Pasta | Build | Rotas públicas |
+| --- | --- | --- | --- |
+| `web` | raiz | `npm run build` (Next.js) | todas as outras |
+| `api` | `backend` | `npm run build` (Prisma Client, tipos e bundle do AdminJS) | `/api`, `/admin`, `/admin-assets`, `/brand`, `/health` |
 
-Ordem do primeiro deploy:
+- Cada push gera um deploy de preview; o merge na `main` publica em produção.
+- O serviço `web` chama o serviço `api` pelo binding interno (`BACKEND_URL`), sem passar pela internet.
+- As variáveis do projeto (banco Neon, `AUTH_SECRET`, chaves do assistente) valem para os dois serviços.
 
-1. Criar o projeto `reuse-api` com pasta raiz `backend` e configurar as variáveis do backend.
-2. Aplicar as migrations no banco de produção: `cd backend && npm run prisma:deploy`.
-3. Rodar o seed com `SEED_PASSWORD` e criar as contas do painel com `npm run admin:create`.
-4. Conferir `/health`, `/api/docs` e `/admin` na URL da API.
-5. No projeto `reuse`, definir `BACKEND_URL` com a URL da API e fazer novo deploy.
+Banco de produção (uma vez por mudança de schema), com as variáveis do projeto em um arquivo local:
+
+1. `cd backend && npm run prisma:deploy` — aplica as migrations.
+2. `SEED_PASSWORD=... npm run prisma:seed` — dados de demonstração (só faz upsert, não apaga dados).
+3. `npm run admin:create` — cria as contas do painel (perfis `ADMIN` e `VIEWER`).
+4. Conferir `/health`, `/api/docs` e `/admin` no domínio do site.
 
 ## Qualidade
 

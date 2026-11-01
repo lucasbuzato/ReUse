@@ -9,7 +9,7 @@ import ItemImage from "@/components/ui/ItemImage";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { getCurrentUser, getMyInterests, getMyItems } from "@/lib/api";
 import { formatMonthYear, formatNumber, plural, timeAgo } from "@/lib/format";
-import { backendPublicUrl } from "@/lib/site";
+import { backendLinks } from "@/lib/site";
 import type { Item, MyInterest } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -130,7 +130,7 @@ export default async function PerfilPage() {
               </p>
             </div>
           </div>
-          <a href={`${backendPublicUrl}/admin`} className="btn-secondary shrink-0">
+          <a href={backendLinks.admin} className="btn-secondary shrink-0">
             Abrir painel
           </a>
         </section>
