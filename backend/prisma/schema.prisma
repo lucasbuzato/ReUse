@@ -1,0 +1,96 @@
+// Schema do banco de dados da plataforma ReUse!
+// ORM: Prisma | Banco de dados: PostgreSQL (Neon em produção)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Perfis de acesso: USER (plataforma), ADMIN (painel completo), VIEWER (painel somente leitura)
+enum UserRole {
+  USER
+  ADMIN
+  VIEWER
+}
+
+/// Usuários da plataforma (doadores e interessados em itens)
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  password    String // armazenada como hash (scrypt)
+  city        String?
+  role        UserRole @default(USER)
+  /// Origem do cadastro (parâmetros UTM das campanhas de marketing digital)
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  createdAt   DateTime @default(now())
+
+  items     Item[]
+  interests Interest[]
+
+  @@map("users")
+}
+
+/// Categorias usadas para organizar os itens
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  items Item[]
+
+  @@map("categories")
+}
+
+/// Itens disponíveis para doação/troca na plataforma
+model Item {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  condition   String
+  imageUrl    String?
+  status      String   @default("DISPONIVEL") // DISPONIVEL | PAUSADO | RESERVADO | DOADO
+  createdAt   DateTime @default(now())
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  interests Interest[]
+
+  @@index([status, createdAt])
+  @@index([ownerId])
+  @@map("items")
+}
+
+/// Registro de interesse de um usuário em um item
+model Interest {
+  id        String   @id @default(cuid())
+  message   String
+  createdAt DateTime @default(now())
+
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId, itemId])
+  @@map("interests")
+}
+
+/// Sessões do painel administrativo (connect-pg-simple). Não aparece no painel.
+model AdminSession {
+  sid    String   @id @db.VarChar
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire])
+  @@map("admin_sessions")
+}
